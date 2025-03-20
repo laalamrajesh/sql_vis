@@ -138,37 +138,11 @@ export const parseQuery = (query: string, db: Database): QueryPlan => {
     }
   }
   
-  // Parse SELECT clause
+  // Store SELECT query information for later use
+  let selectColumns = '*';
   const selectMatch = SELECT_REGEX.exec(normalizedQuery);
   if (selectMatch && selectMatch[1]) {
-    const selectColumns = selectMatch[1].trim();
-    
-    // Get the source of data for SELECT (could be FROM, WHERE, JOIN, GROUP BY...)
-    let sourceStep = steps.length > 0 ? steps[steps.length - 1] : null;
-    const tableName = steps.find(s => s.type === 'FROM')?.metadata?.tableName;
-    
-    if (tableName && sourceStep) {
-      // Get the selected columns data
-      const selectData = db.exec(`
-        SELECT ${selectColumns} 
-        FROM ${tableName} 
-        ${sourceStep.type === 'WHERE' ? `WHERE ${sourceStep.metadata.condition}` : ''}
-        ${sourceStep.type === 'GROUP BY' ? `GROUP BY ${sourceStep.metadata.groupByColumns}` : ''}
-        LIMIT 100
-      `);
-      
-      steps.push({
-        id: uuidv4(),
-        type: 'SELECT',
-        description: `Select columns: ${selectColumns}`,
-        data: selectData,
-        duration: 600,
-        metadata: {
-          selectColumns,
-          tableName
-        }
-      });
-    }
+    selectColumns = selectMatch[1].trim();
   }
   
   // Parse ORDER BY clause
@@ -176,14 +150,13 @@ export const parseQuery = (query: string, db: Database): QueryPlan => {
   if (orderByMatch && orderByMatch[1]) {
     const orderByColumns = orderByMatch[1].trim();
     
-    // Get the source of data (usually the SELECT result)
-    const selectStep = steps.find(s => s.type === 'SELECT');
+    // Get the source of data
     const tableName = steps.find(s => s.type === 'FROM')?.metadata?.tableName;
     
-    if (tableName && selectStep) {
+    if (tableName) {
       // Get data in specified order
       const orderData = db.exec(`
-        SELECT ${selectStep.metadata.selectColumns} 
+        SELECT * 
         FROM ${tableName} 
         ${steps.find(s => s.type === 'WHERE') ? `WHERE ${steps.find(s => s.type === 'WHERE')?.metadata.condition}` : ''}
         ${steps.find(s => s.type === 'GROUP BY') ? `GROUP BY ${steps.find(s => s.type === 'GROUP BY')?.metadata.groupByColumns}` : ''}
@@ -207,18 +180,20 @@ export const parseQuery = (query: string, db: Database): QueryPlan => {
   
   // Parse LIMIT clause
   const limitMatch = LIMIT_REGEX.exec(normalizedQuery);
+  let limit = '100';
+  let offset = '0';
+  
   if (limitMatch) {
-    const limit = limitMatch[1];
-    const offset = limitMatch[2] || limitMatch[3] || '0';
+    limit = limitMatch[1];
+    offset = limitMatch[2] || limitMatch[3] || '0';
     
-    // Get the source of data (usually the ORDER BY or SELECT result)
-    const sourceStep = steps.find(s => s.type === 'ORDER BY') || steps.find(s => s.type === 'SELECT');
+    // Get the source of data
     const tableName = steps.find(s => s.type === 'FROM')?.metadata?.tableName;
     
-    if (tableName && sourceStep) {
+    if (tableName) {
       // Get limited data
       const limitData = db.exec(`
-        SELECT ${steps.find(s => s.type === 'SELECT')?.metadata.selectColumns || '*'} 
+        SELECT * 
         FROM ${tableName} 
         ${steps.find(s => s.type === 'WHERE') ? `WHERE ${steps.find(s => s.type === 'WHERE')?.metadata.condition}` : ''}
         ${steps.find(s => s.type === 'GROUP BY') ? `GROUP BY ${steps.find(s => s.type === 'GROUP BY')?.metadata.groupByColumns}` : ''}
@@ -235,6 +210,37 @@ export const parseQuery = (query: string, db: Database): QueryPlan => {
         metadata: {
           limit,
           offset,
+          tableName
+        }
+      });
+    }
+  }
+  
+  // Process SELECT clause last
+  if (selectMatch && selectMatch[1]) {
+    // Get the source of data (could be LIMIT, ORDER BY, GROUP BY, etc.)
+    let sourceStep = steps.length > 0 ? steps[steps.length - 1] : null;
+    const tableName = steps.find(s => s.type === 'FROM')?.metadata?.tableName;
+    
+    if (tableName && sourceStep) {
+      // Get the selected columns data
+      const selectData = db.exec(`
+        SELECT ${selectColumns} 
+        FROM ${tableName} 
+        ${steps.find(s => s.type === 'WHERE') ? `WHERE ${steps.find(s => s.type === 'WHERE')?.metadata.condition}` : ''}
+        ${steps.find(s => s.type === 'GROUP BY') ? `GROUP BY ${steps.find(s => s.type === 'GROUP BY')?.metadata.groupByColumns}` : ''}
+        ${steps.find(s => s.type === 'ORDER BY') ? `ORDER BY ${steps.find(s => s.type === 'ORDER BY')?.metadata.orderByColumns}` : ''}
+        LIMIT ${limit} OFFSET ${offset}
+      `);
+      
+      steps.push({
+        id: uuidv4(),
+        type: 'SELECT',
+        description: `Select columns: ${selectColumns}`,
+        data: selectData,
+        duration: 600,
+        metadata: {
+          selectColumns,
           tableName
         }
       });
