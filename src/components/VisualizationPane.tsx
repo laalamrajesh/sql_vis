@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Card, Typography, Empty, Table } from 'antd';
+import { Card, Typography, Empty, Table, Row, Col, Divider } from 'antd';
 import { useAppStore } from '../store/appStore';
 import './VisualizationPane.css';
 
@@ -17,6 +17,9 @@ const VisualizationPane: React.FC = () => {
   
   // Get the current step being visualized
   const currentStep = executionSteps[currentStepIndex];
+  
+  // Get the previous step (if exists)
+  const previousStep = currentStepIndex > 0 ? executionSteps[currentStepIndex - 1] : null;
   
   // Scroll visualization into view when step changes
   useEffect(() => {
@@ -105,6 +108,86 @@ const VisualizationPane: React.FC = () => {
     });
   };
   
+  // Render a specific step's data table
+  const renderStepTable = (step: any, stepIndex: number, isCurrentStep: boolean = false) => {
+    if (!step || !step.data) {
+      return <Empty description="No data available for this step" />;
+    }
+    
+    const columns = generateColumns(step.data);
+    const dataSource = generateDataSource(step.data);
+    
+    return (
+      <div>
+        <div className="step-header">
+          <Title level={5} className={`step-type step-type-${step.type.toLowerCase().replace(/\s+/g, '-')}`}>
+            {step.type}
+          </Title>
+          <Text>{step.description}</Text>
+        </div>
+        
+        <div className="table-container" id={`step-${stepIndex}-visualization`}>
+          <Table
+            columns={columns}
+            dataSource={dataSource}
+            pagination={false}
+            scroll={{ x: 'max-content', y: 250 }}
+            bordered
+            size="small"
+            rowClassName={(record, index) => {
+              // Add row identifier for animation targeting
+              const className = `table-row ${isCurrentStep ? 'current-step' : 'previous-step'}`;
+              
+              if (step.type === 'WHERE') {
+                return `${className} ${record[`col_${columns.length - 1}`] === 1 ? 'matched-row' : 'filtered-row'}`;
+              }
+              
+              return className;
+            }}
+          />
+        </div>
+      </div>
+    );
+  };
+  
+  // Function to render transition explanation based on step types
+  const renderTransitionExplanation = (fromStep: any, toStep: any) => {
+    if (!fromStep || !toStep) return null;
+    
+    const fromType = fromStep.type;
+    const toType = toStep.type;
+    
+    let explanation = "";
+    
+    // Determine explanation based on transition type
+    if (fromType === 'FROM' && toType === 'WHERE') {
+      explanation = "Filtering rows from the table based on the WHERE condition";
+    } else if (fromType === 'FROM' && toType === 'JOIN') {
+      explanation = "Combining data from multiple tables based on the JOIN condition";
+    } else if (fromType === 'WHERE' && toType === 'JOIN') {
+      explanation = "Joining filtered data with another table";
+    } else if ((fromType === 'FROM' || fromType === 'WHERE' || fromType === 'JOIN') && toType === 'GROUP BY') {
+      explanation = "Grouping rows with the same values in specified columns";
+    } else if (toType === 'ORDER BY') {
+      explanation = "Sorting the result set based on specified columns";
+    } else if (toType === 'LIMIT') {
+      explanation = "Restricting the number of rows in the final result";
+    } else if (toType === 'SELECT') {
+      explanation = "Selecting only specified columns for the final output";
+    } else {
+      explanation = `Transition from ${fromType} to ${toType}`;
+    }
+    
+    return (
+      <div className="transition-explanation">
+        <Divider orientation="center">
+          <Text strong>{fromType} → {toType}</Text>
+        </Divider>
+        <Text>{explanation}</Text>
+      </div>
+    );
+  };
+  
   // Render different content based on execution state
   const renderContent = () => {
     if (error) {
@@ -124,40 +207,34 @@ const VisualizationPane: React.FC = () => {
       );
     }
     
-    // Render the table with step data
-    if (currentStep && currentStep.data) {
-      const columns = generateColumns(currentStep.data);
-      const dataSource = generateDataSource(currentStep.data);
-      
+    // If we have both a previous and current step, show side by side
+    if (previousStep && currentStep) {
       return (
         <div>
-          <div className="step-header">
-            <Title level={4} className={`step-type step-type-${currentStep.type.toLowerCase().replace(/\s+/g, '-')}`}>
-              {currentStep.type}
-            </Title>
-            <Text>{currentStep.description}</Text>
-          </div>
+          {renderTransitionExplanation(previousStep, currentStep)}
           
-          <div className="table-container" id={`step-${currentStepIndex}-visualization`}>
-            <Table
-              columns={columns}
-              dataSource={dataSource}
-              pagination={false}
-              scroll={{ x: 'max-content', y: 300 }}
-              bordered
-              size="small"
-              rowClassName={(record, index) => {
-                // Add row identifier for animation targeting
-                return `table-row ${currentStep.type === 'WHERE' ? 
-                  (record[`col_${columns.length - 1}`] === 1 ? 'matched-row' : 'filtered-row') : ''}`;
-              }}
-            />
-          </div>
+          <Row gutter={16} className="visualization-row">
+            <Col xs={24} md={12} className="previous-step-col">
+              <div className="step-container previous-step-container">
+                {renderStepTable(previousStep, currentStepIndex - 1)}
+              </div>
+            </Col>
+            <Col xs={24} md={12} className="current-step-col">
+              <div className="step-container current-step-container">
+                {renderStepTable(currentStep, currentStepIndex, true)}
+              </div>
+            </Col>
+          </Row>
         </div>
       );
     }
     
-    return <Empty description="No data available for this step" />;
+    // If we're at the first step, just show the current step
+    return (
+      <div className="single-step-container">
+        {renderStepTable(currentStep, currentStepIndex, true)}
+      </div>
+    );
   };
   
   return (

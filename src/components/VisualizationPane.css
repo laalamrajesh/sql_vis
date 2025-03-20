@@ -1,5 +1,6 @@
 .visualization-pane-card {
-  margin: 16px 0;
+  margin-top: 16px;
+  height: 100%;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   width: 100%;
@@ -15,44 +16,51 @@
   margin-bottom: 16px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
 
 .step-type {
-  display: inline-block;
+  margin-bottom: 0 !important;
+  display: inline-flex;
+  align-items: center;
   padding: 4px 12px;
   border-radius: 4px;
-  margin-bottom: 8px !important;
-  color: white;
-  max-width: fit-content;
+  font-weight: 600;
 }
 
 .step-type-from {
-  background-color: #4266f5;
+  background-color: rgba(24, 144, 255, 0.15);
+  color: #1890ff;
 }
 
 .step-type-where {
-  background-color: #f54242;
-}
-
-.step-type-group-by {
-  background-color: #42c6f5;
+  background-color: rgba(255, 193, 7, 0.15);
+  color: #fa8c16;
 }
 
 .step-type-join {
-  background-color: #f542f2;
+  background-color: rgba(82, 196, 26, 0.15);
+  color: #52c41a;
+}
+
+.step-type-group-by {
+  background-color: rgba(114, 46, 209, 0.15);
+  color: #722ed1;
 }
 
 .step-type-select {
-  background-color: #42f56f;
+  background-color: rgba(245, 34, 45, 0.15);
+  color: #f5222d;
 }
 
 .step-type-order-by {
-  background-color: #f5b642;
+  background-color: rgba(22, 119, 255, 0.15);
+  color: #1677ff;
 }
 
 .step-type-limit {
-  background-color: #f54284;
+  background-color: rgba(250, 140, 22, 0.15);
+  color: #fa8c16;
 }
 
 .table-container {
@@ -60,6 +68,7 @@
   width: 100%;
   overflow-x: auto;
   max-width: 100%;
+  overflow: auto;
 }
 
 /* Make tables more responsive */
@@ -91,6 +100,11 @@
   border-radius: 4px;
 }
 
+.null-value {
+  color: #d9d9d9;
+  font-style: italic;
+}
+
 .matched-row {
   background-color: rgba(66, 245, 111, 0.1);
 }
@@ -98,12 +112,120 @@
 .filtered-row {
   background-color: rgba(245, 66, 66, 0.1);
   text-decoration: line-through;
+  color: #00000040;
 }
 
-/* Animation related classes */
-.table-row.highlight {
-  background-color: rgba(66, 102, 245, 0.1);
-  transition: background-color 0.3s ease;
+/* Animation CSS classes */
+.active-clause {
+  background-color: #1890ff !important;
+  color: white !important;
+}
+
+.matched-data {
+  background-color: rgba(66, 245, 111, 0.3) !important;
+}
+
+.filtered-data {
+  background-color: rgba(245, 66, 66, 0.3) !important;
+  color: gray;
+}
+
+/* Side-by-side visualization styling */
+.visualization-row {
+  margin-top: 16px;
+}
+
+.step-container {
+  padding: 12px;
+  border-radius: 8px;
+  background-color: #fafafa;
+  height: 100%;
+}
+
+.previous-step-container {
+  border-left: 3px solid #d9d9d9;
+}
+
+.current-step-container {
+  border-left: 3px solid #1890ff;
+}
+
+.single-step-container {
+  padding: 12px;
+  border-radius: 8px;
+  background-color: #fafafa;
+  border-left: 3px solid #1890ff;
+}
+
+.transition-explanation {
+  margin: 16px 0;
+  text-align: center;
+}
+
+/* Different styling for current vs previous rows */
+.previous-step .table-row {
+  opacity: 0.8;
+}
+
+.current-step .table-row {
+  opacity: 1;
+}
+
+/* Transition animations */
+.from-to-where-transition .filtered-row {
+  animation: fadeOutRow 0.5s forwards;
+}
+
+.where-to-join-transition .table-row {
+  animation: slideToJoin 0.5s forwards;
+}
+
+.to-group-by-transition .table-row {
+  animation: groupRows 0.5s forwards;
+}
+
+.to-order-by-transition .table-row {
+  animation: sortRows 0.5s forwards;
+}
+
+.to-limit-transition .table-row {
+  animation: limitRows 0.5s forwards;
+}
+
+.to-select-transition .table-cell {
+  animation: selectColumns 0.5s forwards;
+}
+
+@keyframes fadeOutRow {
+  from { opacity: 1; }
+  to { opacity: 0.3; text-decoration: line-through; }
+}
+
+@keyframes slideToJoin {
+  from { transform: translateX(0); }
+  to { transform: translateX(20px); }
+}
+
+@keyframes groupRows {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(5px); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes sortRows {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(10px); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes limitRows {
+  from { height: 100%; }
+  to { height: 0; overflow: hidden; }
+}
+
+@keyframes selectColumns {
+  from { opacity: 1; }
+  to { opacity: 0.3; }
 }
 
 /* CSS for the limit selector overlay */
