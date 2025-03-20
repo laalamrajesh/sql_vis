@@ -1,18 +1,53 @@
 .database-uploader {
-  display: flex;
-  align-items: center;
+  margin-bottom: 16px;
 }
 
-.database-uploader .ant-btn {
-  background-color: #4a69ff;
-  border-color: #4a69ff;
-  height: 36px;
-  border-radius: 4px;
-  padding: 0 16px;
-  font-weight: 500;
+.upload-instructions {
+  margin-bottom: 16px;
 }
 
-.database-uploader .ant-btn:hover {
-  background-color: #3a59ff;
-  border-color: #3a59ff;
+.upload-instructions p {
+  margin-bottom: 8px;
+}
+
+.upload-status {
+  margin-top: 16px;
+  text-align: center;
+  color: var(--primary-color);
+}
+
+.ant-upload-drag {
+  border: 2px dashed var(--primary-color) !important;
+  transition: border-color 0.3s;
+}
+
+.ant-upload-drag:hover {
+  border-color: var(--primary-color) !important;
+}
+
+/* Custom styling for the upload database button */
+.upload-database-btn {
+  background-color: #22c55e !important; /* Green color */
+  border-color: #22c55e !important;
+  color: white !important;
+}
+
+.upload-database-btn:hover {
+  background-color: #16a34a !important; /* Darker green on hover */
+  border-color: #16a34a !important;
+  color: white !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .database-uploader {
+    display: flex;
+    justify-content: center;
+  }
+  
+  .upload-database-btn {
+    font-size: 12px;
+    padding: 0 12px;
+    height: 32px;
+  }
 } 

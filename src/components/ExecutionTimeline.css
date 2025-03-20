@@ -1,0 +1,107 @@
+.execution-timeline-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  overflow: hidden;
+}
+
+.execution-timeline-card .ant-card-body {
+  padding: 16px;
+  overflow-x: hidden;
+}
+
+.timeline-container {
+  margin-bottom: 16px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  width: 100%;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
+.timeline-controls {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+/* Make slider responsive */
+.ant-slider {
+  max-width: 100%;
+}
+
+/* Step item customization */
+.execution-timeline-card .ant-steps-item-title {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.execution-timeline-card .ant-steps-item-description {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Custom styles for different step types */
+.execution-timeline-card .ant-steps-item-icon {
+  transition: background-color 0.3s;
+}
+
+.execution-timeline-card .ant-steps-item-active .ant-steps-item-icon {
+  box-shadow: 0 0 0 4px rgba(66, 102, 245, 0.2);
+}
+
+.execution-timeline-card .ant-steps-item:hover {
+  cursor: pointer;
+}
+
+.execution-timeline-card .ant-steps-item:hover .ant-steps-item-icon {
+  transform: scale(1.05);
+}
+
+/* Enhanced playback controls */
+.speed-slider {
+  display: flex;
+  align-items: center;
+  margin-left: 16px;
+  background-color: rgba(255, 255, 255, 0.8);
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  max-width: 100%;
+}
+
+.speed-slider span {
+  white-space: nowrap;
+  font-size: 12px;
+  margin-right: 4px;
+}
+
+/* Responsive layouts */
+@media (max-width: 768px) {
+  .timeline-controls {
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  
+  .timeline-controls .ant-row {
+    width: 100%;
+  }
+  
+  .timeline-controls .speed-slider {
+    margin-left: 0;
+    margin-top: 8px;
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .timeline-controls .ant-slider {
+    width: 100% !important;
+  }
+} 

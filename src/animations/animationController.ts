@@ -471,4 +471,4 @@ export class AnimationController {
     
     this.activeAnimations.set(animationId, this.timeline.recent());
   }
-} 
+}

@@ -1,0 +1,118 @@
+.visualization-pane-card {
+  margin: 16px 0;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  overflow: hidden;
+}
+
+.visualization-pane-card .ant-card-body {
+  padding: 16px;
+  overflow-x: hidden;
+}
+
+.step-header {
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.step-type {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 4px;
+  margin-bottom: 8px !important;
+  color: white;
+  max-width: fit-content;
+}
+
+.step-type-from {
+  background-color: #4266f5;
+}
+
+.step-type-where {
+  background-color: #f54242;
+}
+
+.step-type-group-by {
+  background-color: #42c6f5;
+}
+
+.step-type-join {
+  background-color: #f542f2;
+}
+
+.step-type-select {
+  background-color: #42f56f;
+}
+
+.step-type-order-by {
+  background-color: #f5b642;
+}
+
+.step-type-limit {
+  background-color: #f54284;
+}
+
+.table-container {
+  position: relative;
+  width: 100%;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+/* Make tables more responsive */
+.table-container .ant-table-wrapper {
+  width: 100%;
+  max-width: 100%;
+}
+
+.table-container .ant-table {
+  word-break: break-word;
+  table-layout: fixed;
+}
+
+/* Narrow screens: make table cells smaller */
+@media (max-width: 768px) {
+  .table-container .ant-table-cell {
+    padding: 8px 6px;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.error-container {
+  padding: 16px;
+  background-color: #fff2f0;
+  border: 1px solid #ffccc7;
+  border-radius: 4px;
+}
+
+.matched-row {
+  background-color: rgba(66, 245, 111, 0.1);
+}
+
+.filtered-row {
+  background-color: rgba(245, 66, 66, 0.1);
+  text-decoration: line-through;
+}
+
+/* Animation related classes */
+.table-row.highlight {
+  background-color: rgba(66, 102, 245, 0.1);
+  transition: background-color 0.3s ease;
+}
+
+/* CSS for the limit selector overlay */
+.limit-selector {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background-color: rgba(245, 66, 132, 0.2);
+  border: 2px dashed #f54284;
+  z-index: 10;
+  pointer-events: none;
+} 
