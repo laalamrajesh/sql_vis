@@ -92,4 +92,44 @@
   .timeline-section {
     grid-area: timeline;
   }
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #1890ff;
+  padding: 0 16px;
+  color: white;
+  line-height: 64px;
+  height: 64px;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+}
+
+.app-container {
+  min-height: 100vh;
+}
+
+.app-sider {
+  background-color: #fff;
+  border-right: 1px solid #e8e8e8;
+  overflow: auto;
+  height: calc(100vh - 64px);
+}
+
+.app-content {
+  padding: 16px;
+  background-color: #f0f2f5;
+  height: calc(100vh - 64px);
+  overflow: auto;
 } 

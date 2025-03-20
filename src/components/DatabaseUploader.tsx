@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Upload, Button, message, Modal, Space, Tooltip } from 'antd';
-import { UploadOutlined, DatabaseOutlined, DownloadOutlined } from '@ant-design/icons';
+import { Upload, Button, message, Modal, Space, Tooltip, Progress } from 'antd';
+import { UploadOutlined, DatabaseOutlined, DownloadOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { RcFile } from 'antd/lib/upload';
 import { useAppStore } from '../store/appStore';
 import { loadDatabaseFromFile, exportDatabaseToFile } from '../core/sqliteService';
@@ -8,41 +8,103 @@ import './DatabaseUploader.css';
 
 const { Dragger } = Upload;
 
+// SQLite file headers (magic numbers)
+const SQLITE_MAGIC_BYTES = [0x53, 0x51, 0x4c, 0x69, 0x74, 0x65, 0x20, 0x66, 0x6f, 0x72, 0x6d, 0x61, 0x74]; // "SQLite format"
+
 const DatabaseUploader: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const { database, resetExecution } = useAppStore();
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [tableCount, setTableCount] = useState<number | null>(null);
+  const { database, tables, resetExecution } = useAppStore();
   
-  const beforeUpload = (file: RcFile) => {
-    // Check if file is a SQLite database file
-    // SQLite files don't have a standard extension, so we'll just check size
-    const isLt10M = file.size / 1024 / 1024 < 10;
+  // Check if the file is a valid SQLite database by checking its header
+  const checkSqliteHeader = async (file: File): Promise<boolean> => {
+    // Read the first 16 bytes of the file
+    const headerBytes = await readFileHeader(file, 16);
     
+    // Check for SQLite header
+    if (headerBytes) {
+      const isSqliteFormat = SQLITE_MAGIC_BYTES.every((byte, index) => {
+        return byte === headerBytes[index];
+      });
+      
+      return isSqliteFormat;
+    }
+    
+    return false;
+  };
+  
+  // Helper to read the first n bytes of a file
+  const readFileHeader = async (file: File, bytes: number): Promise<Uint8Array | null> => {
+    const slice = file.slice(0, bytes);
+    try {
+      const buffer = await slice.arrayBuffer();
+      return new Uint8Array(buffer);
+    } catch (error) {
+      console.error('Error reading file header:', error);
+      return null;
+    }
+  };
+  
+  const beforeUpload = async (file: RcFile) => {
+    // Size validation
+    const isLt10M = file.size / 1024 / 1024 < 10;
     if (!isLt10M) {
       message.error('Database file must be smaller than 10MB!');
       return Upload.LIST_IGNORE;
     }
     
-    // Handle file upload manually
+    // SQLite format validation
+    const isValidSqlite = await checkSqliteHeader(file);
+    if (!isValidSqlite) {
+      message.error('Invalid SQLite database file format. Please upload a valid .db, .sqlite, or .sqlite3 file.');
+      return Upload.LIST_IGNORE;
+    }
+    
+    // Handle file upload
     handleFileUpload(file);
     return false; // Prevent auto upload
   };
   
   const handleFileUpload = async (file: RcFile) => {
     setIsUploading(true);
+    setUploadProgress(0);
     
     try {
+      // Simulate progress
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          const newProgress = prev + Math.floor(Math.random() * 5) + 1;
+          return newProgress >= 90 ? 90 : newProgress;
+        });
+      }, 100);
+      
       // Load the database from the file
-      await loadDatabaseFromFile(file);
+      const db = await loadDatabaseFromFile(file);
+      
+      // Complete progress
+      clearInterval(progressInterval);
+      setUploadProgress(100);
       
       // Reset any ongoing execution
       resetExecution();
       
-      message.success(`${file.name} database loaded successfully.`);
-      setIsModalVisible(false);
+      // Set table count for feedback
+      setTableCount(tables.length);
+      
+      message.success(`${file.name} database loaded successfully with ${tables.length} tables.`);
+      
+      // Close the modal after a small delay to show 100% progress
+      setTimeout(() => {
+        setIsModalVisible(false);
+        setIsUploading(false);
+        setUploadProgress(0);
+      }, 800);
+      
     } catch (error) {
+      setUploadProgress(0);
       message.error(`Failed to load database: ${error}`);
-    } finally {
       setIsUploading(false);
     }
   };
@@ -80,10 +142,13 @@ const DatabaseUploader: React.FC = () => {
   
   const showUploadModal = () => {
     setIsModalVisible(true);
+    setTableCount(null);
   };
   
   const handleCancel = () => {
-    setIsModalVisible(false);
+    if (!isUploading) {
+      setIsModalVisible(false);
+    }
   };
   
   return (
@@ -108,6 +173,17 @@ const DatabaseUploader: React.FC = () => {
             Export
           </Button>
         </Tooltip>
+        
+        {tables.length > 0 && (
+          <Tooltip title={`${tables.length} tables loaded`}>
+            <Button
+              type="text"
+              icon={<InfoCircleOutlined />}
+            >
+              {tables.length} Tables
+            </Button>
+          </Tooltip>
+        )}
       </Space>
       
       <Modal
@@ -118,6 +194,8 @@ const DatabaseUploader: React.FC = () => {
         width={600}
         centered
         destroyOnClose
+        maskClosable={!isUploading}
+        closable={!isUploading}
       >
         <div className="upload-instructions">
           <p>Upload a SQLite database file (.db, .sqlite, .sqlite3) to use for your SQL queries.</p>
@@ -141,7 +219,18 @@ const DatabaseUploader: React.FC = () => {
           </p>
         </Dragger>
         
-        {isUploading && <p className="upload-status">Uploading and processing database...</p>}
+        {isUploading && (
+          <div className="upload-status">
+            <Progress percent={uploadProgress} status={uploadProgress < 100 ? "active" : "success"} />
+            <p>Processing database file{uploadProgress < 100 ? '...' : ' - Complete!'}</p>
+          </div>
+        )}
+        
+        {tableCount !== null && (
+          <div className="upload-result">
+            <p>Successfully loaded database with {tableCount} tables.</p>
+          </div>
+        )}
       </Modal>
     </div>
   );

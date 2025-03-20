@@ -3,39 +3,77 @@
 }
 
 .upload-instructions {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  padding: 12px;
+  background-color: #f5f5f5;
+  border-radius: 6px;
+  border-left: 4px solid #1890ff;
 }
 
 .upload-instructions p {
   margin-bottom: 8px;
 }
 
+.upload-instructions p:last-child {
+  margin-bottom: 0;
+}
+
 .upload-status {
-  margin-top: 16px;
+  margin-top: 20px;
   text-align: center;
-  color: var(--primary-color);
+}
+
+.upload-status p {
+  margin-top: 8px;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.upload-result {
+  margin-top: 16px;
+  padding: 12px;
+  background-color: #f6ffed;
+  border-radius: 6px;
+  border-left: 4px solid #52c41a;
+  text-align: center;
 }
 
 .ant-upload-drag {
-  border: 2px dashed var(--primary-color) !important;
-  transition: border-color 0.3s;
+  border: 2px dashed #d9d9d9 !important;
+  border-radius: 8px !important;
+  background: #fafafa !important;
+  transition: border-color 0.3s, background-color 0.3s !important;
 }
 
 .ant-upload-drag:hover {
-  border-color: var(--primary-color) !important;
+  border-color: #1890ff !important;
+  background-color: #f0f8ff !important;
+}
+
+.ant-upload-text {
+  margin: 8px 0 !important;
+  font-size: 16px !important;
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.ant-upload-hint {
+  color: rgba(0, 0, 0, 0.45) !important;
+}
+
+.ant-upload-drag-icon {
+  margin-bottom: 8px !important;
+  font-size: 48px !important;
+  color: #1890ff !important;
 }
 
 /* Custom styling for the upload database button */
 .upload-database-btn {
-  background-color: #22c55e !important; /* Green color */
-  border-color: #22c55e !important;
-  color: white !important;
+  background-color: #1890ff;
+  color: white;
 }
 
 .upload-database-btn:hover {
-  background-color: #16a34a !important; /* Darker green on hover */
-  border-color: #16a34a !important;
-  color: white !important;
+  background-color: #40a9ff;
+  color: white;
 }
 
 /* Responsive adjustments */
