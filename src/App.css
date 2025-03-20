@@ -132,4 +132,51 @@
   background-color: #f0f2f5;
   height: calc(100vh - 64px);
   overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* SQL Editor should take minimum required height */
+.app-content > *:nth-child(1) {
+  flex: 0 0 auto;
+  margin-bottom: 16px;
+}
+
+/* Visualization pane should expand to fill available space */
+.app-content > *:nth-child(2) {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Timeline should stick to bottom with minimum height */
+.app-content > *:nth-child(3) {
+  flex: 0 0 auto;
+  margin-top: 16px;
+  position: sticky;
+  bottom: 0;
+}
+
+/* When there's plenty of space, allow the visualization to be a reasonable size */
+@media (min-height: 900px) {
+  .app-content > *:nth-child(2) {
+    max-height: calc(100vh - 400px);
+  }
+}
+
+/* For smaller screens, ensure everything is still visible */
+@media (max-height: 768px) {
+  .app-content {
+    padding: 8px;
+  }
+  
+  .app-content > *:nth-child(1) {
+    margin-bottom: 8px;
+  }
+  
+  .app-content > *:nth-child(3) {
+    margin-top: 8px;
+  }
 } 

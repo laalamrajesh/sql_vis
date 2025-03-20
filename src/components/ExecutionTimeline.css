@@ -3,17 +3,19 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   width: 100%;
   overflow: hidden;
+  background-color: white;
+  margin-top: auto; /* Push to bottom when in a flex container */
 }
 
 .execution-timeline-card .ant-card-body {
-  padding: 16px;
+  padding: 12px;
   overflow-x: hidden;
 }
 
 .timeline-container {
-  margin-bottom: 16px;
+  margin-bottom: 8px;
   overflow-x: auto;
-  padding-bottom: 8px;
+  padding-bottom: 4px;
   width: 100%;
   max-width: 100%;
   -webkit-overflow-scrolling: touch;
@@ -22,7 +24,7 @@
 .timeline-controls {
   display: flex;
   justify-content: center;
-  margin-top: 16px;
+  margin-top: 8px;
   width: 100%;
   flex-wrap: wrap;
 }
@@ -32,12 +34,13 @@
   max-width: 100%;
 }
 
-/* Step item customization */
+/* Step item customization - make more compact */
 .execution-timeline-card .ant-steps-item-title {
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 14px;
 }
 
 .execution-timeline-card .ant-steps-item-description {
@@ -45,6 +48,21 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-height: 32px;
+}
+
+/* Use more compact steps for smaller screens */
+@media (max-width: 992px) {
+  .execution-timeline-card .ant-steps-item-icon {
+    width: 28px;
+    height: 28px;
+    line-height: 28px;
+    font-size: 14px;
+  }
+  
+  .execution-timeline-card .ant-steps-item-content {
+    min-height: 32px;
+  }
 }
 
 /* Custom styles for different step types */
@@ -52,8 +70,42 @@
   transition: background-color 0.3s;
 }
 
+/* Make non-selected items grey */
+.execution-timeline-card .ant-steps-item {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.execution-timeline-card .ant-steps-item-wait .ant-steps-item-icon {
+  background-color: #f5f5f5;
+  border-color: #d9d9d9;
+}
+
+.execution-timeline-card .ant-steps-item-wait .ant-steps-item-icon > .ant-steps-icon {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+/* Make active/selected items blue */
+.execution-timeline-card .ant-steps-item-active {
+  color: #1890ff;
+}
+
 .execution-timeline-card .ant-steps-item-active .ant-steps-item-icon {
-  box-shadow: 0 0 0 4px rgba(66, 102, 245, 0.2);
+  background-color: #1890ff;
+  border-color: #1890ff;
+  box-shadow: 0 0 0 4px rgba(24, 144, 255, 0.2);
+}
+
+.execution-timeline-card .ant-steps-item-active .ant-steps-item-icon > .ant-steps-icon {
+  color: #fff;
+}
+
+.execution-timeline-card .ant-steps-item-finish .ant-steps-item-icon {
+  background-color: #fff;
+  border-color: #1890ff;
+}
+
+.execution-timeline-card .ant-steps-item-finish .ant-steps-item-icon > .ant-steps-icon {
+  color: #1890ff;
 }
 
 .execution-timeline-card .ant-steps-item:hover {
@@ -72,7 +124,7 @@
   background-color: rgba(255, 255, 255, 0.8);
   padding: 4px 8px;
   border-radius: 4px;
-  border: 1px solid var(--border-color);
+  border: 1px solid #e8e8e8;
   max-width: 100%;
 }
 
@@ -87,7 +139,7 @@
   .timeline-controls {
     flex-direction: column;
     align-items: center;
-    gap: 16px;
+    gap: 8px;
   }
   
   .timeline-controls .ant-row {
@@ -103,5 +155,18 @@
   
   .timeline-controls .ant-slider {
     width: 100% !important;
+  }
+  
+  /* Make timeline even more compact on small screens */
+  .execution-timeline-card .ant-card-body {
+    padding: 8px;
+  }
+  
+  .timeline-container {
+    margin-bottom: 4px;
+  }
+  
+  .timeline-controls {
+    margin-top: 4px;
   }
 } 

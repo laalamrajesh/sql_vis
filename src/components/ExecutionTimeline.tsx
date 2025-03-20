@@ -66,7 +66,8 @@ const ExecutionTimeline: React.FC = () => {
     if (index < currentStepIndex) {
       return 'finish';
     } else if (index === currentStepIndex) {
-      return executionState === 'running' ? 'process' : 'wait';
+      // Always mark the current step as 'process' (active) regardless of execution state
+      return 'process';
     } else {
       return 'wait';
     }

@@ -1,15 +1,37 @@
 .visualization-pane-card {
   margin-top: 16px;
-  height: 100%;
+  margin-bottom: 16px;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0; /* Allow flex item to shrink below content size */
   overflow: hidden;
 }
 
 .visualization-pane-card .ant-card-body {
   padding: 16px;
-  overflow-x: hidden;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0; /* Critical for flex child to not expand beyond parent */
+}
+
+/* Title should take minimal space */
+.visualization-pane-card .ant-typography {
+  margin-bottom: 12px !important;
+}
+
+/* Container for tables should expand to fill available space */
+.visualization-pane-card > .ant-card-body > div {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .step-header {
@@ -63,12 +85,12 @@
   color: #fa8c16;
 }
 
+/* Make the tables take just enough space needed */
 .table-container {
   position: relative;
-  width: 100%;
-  overflow-x: auto;
-  max-width: 100%;
   overflow: auto;
+  min-height: 0;
+  flex: 1;
 }
 
 /* Make tables more responsive */
@@ -132,14 +154,41 @@
 
 /* Side-by-side visualization styling */
 .visualization-row {
-  margin-top: 16px;
+  margin-top: 12px;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.visualization-row > .ant-col {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Keep visualization content compact */
+.single-step-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 8px;
+  border-radius: 8px;
+  background-color: #fafafa;
+  border-left: 3px solid #1890ff;
 }
 
 .step-container {
-  padding: 12px;
+  padding: 8px;
   border-radius: 8px;
   background-color: #fafafa;
-  height: 100%;
+  height: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 .previous-step-container {
@@ -150,15 +199,8 @@
   border-left: 3px solid #1890ff;
 }
 
-.single-step-container {
-  padding: 12px;
-  border-radius: 8px;
-  background-color: #fafafa;
-  border-left: 3px solid #1890ff;
-}
-
 .transition-explanation {
-  margin: 16px 0;
+  margin: 12px 0;
   text-align: center;
 }
 
@@ -237,4 +279,21 @@
   border: 2px dashed #f54284;
   z-index: 10;
   pointer-events: none;
+}
+
+/* Allow table to scroll within container */
+.ant-table-wrapper {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Ensure Ant Design Table can shrink properly */
+.ant-table, .ant-table-container, .ant-table-content {
+  height: 100%;
+}
+
+.ant-table-body {
+  overflow-y: auto !important;
+  height: 100%;
+  max-height: unset !important;
 } 
