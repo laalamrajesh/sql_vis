@@ -1,0 +1,101 @@
+.sql-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 16px;
+  background-color: #1a1a1a;
+  border-radius: 6px;
+}
+
+.editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.editor-header h3 {
+  margin: 0;
+  color: white;
+  font-size: 18px;
+}
+
+.editor-buttons .ant-btn-text {
+  color: #4a69ff;
+}
+
+.editor-buttons .ant-btn-text:hover {
+  color: #6987ff;
+  background-color: rgba(74, 105, 255, 0.1);
+}
+
+.code-mirror-wrapper {
+  flex: 1;
+  min-height: 150px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 12px;
+  background-color: #1a1a1a;
+}
+
+.editor-controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.editor-controls .ant-btn-primary {
+  background-color: #4a69ff;
+  border-color: #4a69ff;
+}
+
+.editor-controls .ant-btn-primary:hover:not(:disabled) {
+  background-color: #6987ff;
+  border-color: #6987ff;
+}
+
+.editor-controls .ant-btn-default {
+  border-color: #4a69ff;
+  color: #4a69ff;
+}
+
+.editor-controls .ant-btn-default:hover:not(:disabled) {
+  border-color: #6987ff;
+  color: #6987ff;
+}
+
+/* Override CodeMirror default styles */
+.cm-editor {
+  background-color: #1e1e1e !important;
+}
+
+.cm-gutters {
+  background-color: #1e1e1e !important;
+  border-right: 1px solid #333 !important;
+}
+
+.cm-activeLine {
+  background-color: rgba(74, 105, 255, 0.1) !important;
+}
+
+.cm-content {
+  color: #e0e0e0 !important;
+}
+
+.cm-scroller::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.cm-scroller::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+.cm-scroller::-webkit-scrollbar-thumb {
+  background-color: #444;
+  border-radius: 4px;
+}
+
+.cm-scroller::-webkit-scrollbar-thumb:hover {
+  background-color: #555;
+} 

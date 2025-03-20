@@ -1,0 +1,18 @@
+.database-uploader {
+  display: flex;
+  align-items: center;
+}
+
+.database-uploader .ant-btn {
+  background-color: #4a69ff;
+  border-color: #4a69ff;
+  height: 36px;
+  border-radius: 4px;
+  padding: 0 16px;
+  font-weight: 500;
+}
+
+.database-uploader .ant-btn:hover {
+  background-color: #3a59ff;
+  border-color: #3a59ff;
+} 
