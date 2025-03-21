@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Steps, Button, Space, Slider, Row, Col } from 'antd';
+import { Card, Steps, Button, Space, Slider, Row, Col, Empty } from 'antd';
 import type { StepProps } from 'antd';
 import { 
   DatabaseOutlined, 
@@ -42,14 +42,29 @@ const ExecutionTimeline: React.FC = () => {
     }
   };
   
-  // Format step item for Steps component - simplified for mobile
+  // Get step items for the Steps component
   const getStepItems = () => {
-    return executionSteps.map((step: ExecutionStep, index: number) => ({
-      title: step.type,
-      description: step.description,
-      icon: getStepIcon(step.type),
-      status: getStepStatus(index) as StepProps['status']
-    }));
+    return executionSteps.map((step, index) => {
+      let status: StepProps["status"] = 'wait';
+      
+      if (index === currentStepIndex) {
+        status = 'process';
+      } else if (index < currentStepIndex) {
+        status = 'finish';
+      }
+      
+      // Create an appropriate step item element instead of returning step objects
+      return (
+        <div
+          key={`step-${index}`}
+          className={`step-item ${index === currentStepIndex ? 'active' : ''} ${index < currentStepIndex ? 'completed' : ''}`}
+          onClick={() => handleStepClick(index)}
+        >
+          <span className="step-type">{step.type}</span>
+          <span className="step-item-text">{step.description}</span>
+        </div>
+      );
+    });
   };
   
   // Determine step status based on current execution state
@@ -103,60 +118,40 @@ const ExecutionTimeline: React.FC = () => {
   }
   
   return (
-    <Card className="execution-timeline-card">
-      <div className="timeline-container" style={{ marginBottom: '20px' }}>
-        <Steps 
-          current={currentStepIndex} 
-          items={getStepItems()}
-          onChange={handleStepClick}
-          size="default"
-          direction="horizontal"
-          responsive={false}
-          className="execution-steps"
-          style={{ 
-            overflowX: 'visible', 
-            width: '100%',
-            position: 'relative'
-          }}
-        />
-      </div>
-      
-      <div className="timeline-controls">
-        <Row gutter={[16, 16]} align="middle" style={{ width: '100%' }}>
-          <Col xs={24} md={16}>
-            <Slider
-              min={0}
-              max={executionSteps.length - 1}
-              value={currentStepIndex}
-              onChange={handleSliderChange}
-              step={1}
-              tooltip={{ formatter: (value: any) => executionSteps[value]?.type || 'Step' }}
-              marks={sliderMarks}
-            />
-          </Col>
-          <Col xs={24} md={8}>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '16px' }}>
+    <div className="execution-timeline-container">
+      {executionSteps.length > 0 ? (
+        <>
+          <div className="execution-steps">
+            {getStepItems()}
+          </div>
+          <div className="execution-controls">
+            <div className="nav-buttons">
               <Button 
-                type="primary"
                 onClick={handlePrevStep}
                 disabled={currentStepIndex <= 0}
-                style={{ width: '100px' }}
+                className="nav-button"
               >
                 Previous
               </Button>
               <Button 
-                type="primary"
                 onClick={handleNextStep}
                 disabled={currentStepIndex >= executionSteps.length - 1}
-                style={{ width: '100px' }}
+                type="primary"
+                className="nav-button"
               >
                 Next
               </Button>
             </div>
-          </Col>
-        </Row>
-      </div>
-    </Card>
+          </div>
+        </>
+      ) : (
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description="Run a query to see execution steps"
+          style={{ margin: '12px 0' }}
+        />
+      )}
+    </div>
   );
 };
 

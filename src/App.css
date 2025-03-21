@@ -128,12 +128,18 @@
 }
 
 .app-content {
-  padding: 16px;
-  background-color: #f0f2f5;
-  height: calc(100vh - 64px);
-  overflow: auto;
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 8px;
+  gap: 4px;
+}
+
+/* Add a small margin to ExecutionTimeline when it's at the top */
+.execution-timeline-container {
+  margin-bottom: 4px;
 }
 
 /* SQL Editor should take minimum required height */

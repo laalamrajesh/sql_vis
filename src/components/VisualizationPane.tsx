@@ -858,111 +858,18 @@ const VisualizationPane: React.FC = () => {
     return className;
   };
   
-  // Helper to generate data for displayed tables
-  const generateTableData = (step: any, isCurrentStep: boolean) => {
-    if (!step || !step.data) {
-      return [];
-    }
-    
-    // For previous step tables (left side), show the final state of that step
-    if (!isCurrentStep) {
-      // FROM step when transitioning to WHERE - show original data
-      if (step.type === 'FROM' && currentStep?.type === 'WHERE') {
-        return generateDataSource(step.data);
-      }
-      
-      // WHERE step when transitioning to ORDER BY - show only rows that passed the condition
-      if (step.type === 'WHERE' && currentStep?.type === 'ORDER BY') {
-        const data = generateDataSource(step.data);
-        const conditionIndex = step.data[0]?.columns.findIndex((col: string) => col === '_condition_result');
-        
-        if (conditionIndex !== -1) {
-          return data.filter((row: any) => row[`col_${conditionIndex}`] === 1);
-        }
-        return data;
-      }
-      
-      // ORDER BY step when transitioning to LIMIT - show sorted data
-      if (step.type === 'ORDER BY' && currentStep?.type === 'LIMIT') {
-        return generateDataSource(step.data);
-      }
-      
-      // LIMIT step when transitioning to SELECT - show limited data
-      if (step.type === 'LIMIT' && currentStep?.type === 'SELECT') {
-        return generateDataSource(step.data);
-      }
-      
-      // Default case for previous step
-      return generateDataSource(step.data);
-    }
-    
-    // For current step tables (right side)
-    // Handle special cases during animations
-    
-    // WHERE table during FROM->WHERE transition
-    if (isFromToWhereTransition && step.type === 'WHERE') {
-      return getWhereTableData();
-    }
-    
-    // ORDER BY table during WHERE->ORDER BY transition
-    if (isWhereToOrderByTransition && step.type === 'ORDER BY') {
-      return getOrderByTableData();
-    }
-    
-    // LIMIT table during ORDER BY->LIMIT transition
-    if (isOrderByToLimitTransition && step.type === 'LIMIT') {
-      return getLimitTableData();
-    }
-    
-    // SELECT table during LIMIT->SELECT transition
-    if (isLimitToSelectTransition && step.type === 'SELECT') {
-      return getSelectTableData();
-    }
-    
-    // Default case for current step
-    return generateDataSource(step.data);
-  };
-  
-  // Render explanatory text for transitions
-  const renderTransitionExplanation = (fromStep: any, toStep: any) => {
-    if (fromStep.type === 'FROM' && toStep.type === 'WHERE') {
-      return (
-        <div className="transition-explanation">
-          <Divider>
-            <Text strong>Filtering Data with WHERE Clause</Text>
-          </Divider>
-          <Text>
-            The WHERE clause filters rows from the table based on a condition. 
-            Only rows that satisfy the condition will proceed to the next step.
-          </Text>
-        </div>
-      );
-    }
-    
-    if (fromStep.type === 'WHERE' && toStep.type === 'ORDER BY') {
-      return (
-        <div className="transition-explanation">
-          <Divider>
-            <Text strong>Sorting Data with ORDER BY Clause</Text>
-          </Divider>
-          <Text>
-            The ORDER BY clause sorts the filtered data based on one or more columns. 
-            {toStep.metadata?.orderByColumns.includes('DESC') 
-              ? ' Results are sorted in descending order (highest to lowest).' 
-              : ' Results are sorted in ascending order (lowest to highest).'}
-          </Text>
-        </div>
-      );
-    }
+  // Helper function to render the step header
+  const renderStepHeader = (step: any) => {
+    if (!step) return null;
     
     return (
-      <div className="transition-explanation">
-        <Divider>
-          <Text strong>From {fromStep.type} to {toStep.type}</Text>
-        </Divider>
-        <Text>
-          {`Moving from ${fromStep.type} to ${toStep.type} in the SQL execution process.`}
-        </Text>
+      <div className="step-header">
+        <div className={`step-type step-type-${step.type.toLowerCase().replace(/\s+/g, '-')}`}>
+          {step.type}
+        </div>
+        {step.description && (
+          <Text style={{ margin: 0 }}>{step.description}</Text>
+        )}
       </div>
     );
   };
@@ -1140,153 +1047,286 @@ const VisualizationPane: React.FC = () => {
     );
   };
   
-  // Render different content based on execution state
-  const renderContent = () => {
-    if (error) {
-      return (
-        <div className="error-container">
-          <Text type="danger">Error: {error}</Text>
-        </div>
-      );
+  // Helper to generate data for displayed tables
+  const generateTableData = (step: any, isCurrentStep: boolean) => {
+    if (!step || !step.data) {
+      return [];
     }
     
-    if (executionState === 'idle' || currentStepIndex < 0) {
-      return (
-        <Empty 
-          description="Run a query to visualize its execution" 
-          image={Empty.PRESENTED_IMAGE_SIMPLE} 
-        />
-      );
-    }
-    
-    // If we have both a previous and current step, show side by side
-    if (previousStep && currentStep) {
-      // Show animation controls based on the transition type
-      let transitionControls = null;
-      
-      if (isFromToWhereTransition && !animationInProgress) {
-        transitionControls = (
-          <div className="animation-controls">
-            <Alert
-              message="Click to see the WHERE condition evaluation process"
-              type="info"
-              showIcon
-              action={
-                <button 
-                  className="start-animation-btn" 
-                  onClick={startFromToWhereAnimation}
-                >
-                  Start Animation
-                </button>
-              }
-            />
-          </div>
-        );
-      } else if (isWhereToOrderByTransition && !sortingInProgress) {
-        transitionControls = (
-          <div className="animation-controls">
-            <Alert
-              message="Click to see the ORDER BY sorting process"
-              type="info"
-              showIcon
-              action={
-                <button 
-                  className="start-animation-btn" 
-                  onClick={startWhereToOrderByAnimation}
-                >
-                  Start Animation
-                </button>
-              }
-            />
-          </div>
-        );
-      } else if (isOrderByToLimitTransition && !limitingInProgress) {
-        transitionControls = (
-          <div className="animation-controls">
-            <Alert
-              message="Click to see the LIMIT row selection process"
-              type="info"
-              showIcon
-              action={
-                <button 
-                  className="start-animation-btn" 
-                  onClick={startOrderByToLimitAnimation}
-                >
-                  Start Animation
-                </button>
-              }
-            />
-          </div>
-        );
-      } else if (isLimitToSelectTransition && !selectingInProgress) {
-        transitionControls = (
-          <div className="animation-controls">
-            <Alert
-              message="Click to see the SELECT column selection process"
-              type="info"
-              showIcon
-              action={
-                <button 
-                  className="start-animation-btn" 
-                  onClick={startLimitToSelectAnimation}
-                >
-                  Start Animation
-                </button>
-              }
-            />
-          </div>
-        );
+    // For previous step tables (left side), show the final state of that step
+    if (!isCurrentStep) {
+      // FROM step when transitioning to WHERE - show original data
+      if (step.type === 'FROM' && currentStep?.type === 'WHERE') {
+        return generateDataSource(step.data);
       }
       
-      // Add class for different transition types
-      let transitionClass = '';
-      if (isFromToWhereTransition) {
-        transitionClass = 'from-to-where-transition';
-      } else if (isWhereToOrderByTransition) {
-        transitionClass = 'where-to-order-by-transition';
-      } else if (isOrderByToLimitTransition) {
-        transitionClass = 'order-by-to-limit-transition';
-      } else if (isLimitToSelectTransition) {
-        transitionClass = 'limit-to-select-transition';
+      // WHERE step when transitioning to ORDER BY - show only rows that passed the condition
+      if (step.type === 'WHERE' && currentStep?.type === 'ORDER BY') {
+        const data = generateDataSource(step.data);
+        const conditionIndex = step.data[0]?.columns.findIndex((col: string) => col === '_condition_result');
+        
+        if (conditionIndex !== -1) {
+          return data.filter((row: any) => row[`col_${conditionIndex}`] === 1);
+        }
+        return data;
       }
       
-      return (
-        <div>
-          {renderTransitionExplanation(previousStep, currentStep)}
-          {transitionControls}
-          
-          <Row gutter={16} className={`visualization-row ${transitionClass}`}>
-            <Col xs={24} md={12} className="previous-step-col">
-              <div className="step-container previous-step-container">
-                {renderStepTable(previousStep, false)}
-              </div>
-            </Col>
-            <Col xs={24} md={12} className="current-step-col">
-              <div className="step-container current-step-container">
-                {renderStepTable(currentStep, true)}
-              </div>
-            </Col>
-          </Row>
-        </div>
-      );
+      // ORDER BY step when transitioning to LIMIT - show sorted data
+      if (step.type === 'ORDER BY' && currentStep?.type === 'LIMIT') {
+        return generateDataSource(step.data);
+      }
+      
+      // LIMIT step when transitioning to SELECT - show limited data
+      if (step.type === 'LIMIT' && currentStep?.type === 'SELECT') {
+        return generateDataSource(step.data);
+      }
+      
+      // Default case for previous step
+      return generateDataSource(step.data);
     }
     
-    // If only one step, show it full width
-    return (
-      <div className="step-container single-step-container">
-        {renderStepTable(currentStep, true)}
-      </div>
-    );
+    // For current step tables (right side)
+    // Handle special cases during animations
+    
+    // WHERE table during FROM->WHERE transition
+    if (isFromToWhereTransition && step.type === 'WHERE') {
+      return getWhereTableData();
+    }
+    
+    // ORDER BY table during WHERE->ORDER BY transition
+    if (isWhereToOrderByTransition && step.type === 'ORDER BY') {
+      return getOrderByTableData();
+    }
+    
+    // LIMIT table during ORDER BY->LIMIT transition
+    if (isOrderByToLimitTransition && step.type === 'LIMIT') {
+      return getLimitTableData();
+    }
+    
+    // SELECT table during LIMIT->SELECT transition
+    if (isLimitToSelectTransition && step.type === 'SELECT') {
+      return getSelectTableData();
+    }
+    
+    // Default case for current step
+    return generateDataSource(step.data);
   };
   
+  // Helper to get transition class name based on step types
+  const getTransitionClassName = (previousStep: any, currentStep: any) => {
+    if (previousStep?.type === 'FROM' && currentStep?.type === 'WHERE') {
+      return 'from-to-where-transition';
+    }
+    if (previousStep?.type === 'WHERE' && currentStep?.type === 'ORDER BY') {
+      return 'where-to-order-by-transition';
+    }
+    if (previousStep?.type === 'ORDER BY' && currentStep?.type === 'LIMIT') {
+      return 'order-by-to-limit-transition';
+    }
+    if (previousStep?.type === 'LIMIT' && currentStep?.type === 'SELECT') {
+      return 'limit-to-select-transition';
+    }
+    return '';
+  };
+  
+  // Render animation controls for the current transition
+  const renderAnimationControls = () => {
+    if (isFromToWhereTransition && !animationInProgress) {
+      return (
+        <div className="animation-controls">
+          <Alert
+            message="Click to see the WHERE condition evaluation process"
+            type="info"
+            showIcon
+            action={
+              <button 
+                className="start-animation-btn" 
+                onClick={startFromToWhereAnimation}
+              >
+                Visualize
+              </button>
+            }
+          />
+        </div>
+      );
+    } 
+    
+    if (isWhereToOrderByTransition && !sortingInProgress) {
+      return (
+        <div className="animation-controls">
+          <Alert
+            message="Click to see the ORDER BY sorting process"
+            type="info"
+            showIcon
+            action={
+              <button 
+                className="start-animation-btn" 
+                onClick={startWhereToOrderByAnimation}
+              >
+                Visualize
+              </button>
+            }
+          />
+        </div>
+      );
+    } 
+    
+    if (isOrderByToLimitTransition && !limitingInProgress) {
+      return (
+        <div className="animation-controls">
+          <Alert
+            message="Click to see the LIMIT row selection process"
+            type="info"
+            showIcon
+            action={
+              <button 
+                className="start-animation-btn" 
+                onClick={startOrderByToLimitAnimation}
+              >
+                Visualize
+              </button>
+            }
+          />
+        </div>
+      );
+    } 
+    
+    if (isLimitToSelectTransition && !selectingInProgress) {
+      return (
+        <div className="animation-controls">
+          <Alert
+            message="Click to see the SELECT column selection process"
+            type="info"
+            showIcon
+            action={
+              <button 
+                className="start-animation-btn" 
+                onClick={startLimitToSelectAnimation}
+              >
+                Visualize
+              </button>
+            }
+          />
+        </div>
+      );
+    }
+    
+    return null;
+  };
+  
+  // Get a simple animation button based on the current transition
+  const getAnimationButton = () => {
+    if (isFromToWhereTransition && !animationInProgress) {
+      return (
+        <button 
+          className="start-animation-btn" 
+          onClick={startFromToWhereAnimation}
+        >
+          Start Visualization
+        </button>
+      );
+    } 
+    
+    if (isWhereToOrderByTransition && !sortingInProgress) {
+      return (
+        <button 
+          className="start-animation-btn" 
+          onClick={startWhereToOrderByAnimation}
+        >
+          Start Visualization
+        </button>
+      );
+    } 
+    
+    if (isOrderByToLimitTransition && !limitingInProgress) {
+      return (
+        <button 
+          className="start-animation-btn" 
+          onClick={startOrderByToLimitAnimation}
+        >
+          Start Visualization
+        </button>
+      );
+    } 
+    
+    if (isLimitToSelectTransition && !selectingInProgress) {
+      return (
+        <button 
+          className="start-animation-btn" 
+          onClick={startLimitToSelectAnimation}
+        >
+          Start Visualization
+        </button>
+      );
+    }
+    
+    return null;
+  };
+  
+  // Main render function
   return (
-    <Card 
-      title="SQL Execution Visualization" 
-      className="visualization-pane"
-      ref={containerRef}
-    >
-      {renderContent()}
-    </Card>
+    <div ref={containerRef} style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', minHeight: 0 }}>
+      {error ? (
+        <Card className="visualization-pane-card">
+          <div className="error-container">
+            <pre>{error}</pre>
+          </div>
+        </Card>
+      ) : (
+        <Card 
+          className="visualization-pane-card"
+          title={
+            <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+              <span style={{ fontSize: '16px' }}>SQL Execution Visualization</span>
+              <div style={{ position: 'absolute', left: 0, right: 0, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
+                <div style={{ pointerEvents: 'auto' }}>
+                  {getAnimationButton()}
+                </div>
+              </div>
+            </div>
+          }
+          bodyStyle={{ flex: 1, overflow: 'auto', padding: '8px', display: 'flex', flexDirection: 'column' }}
+        >
+          {!currentStep ? (
+            <Empty description="Run a query to see the execution visualization" />
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+              {/* Render appropriate UI based on whether we're transitioning or not */}
+              {!previousStep || (currentStep.type === previousStep.type) ? (
+                <div className="single-step-container">
+                  {renderStepTable(currentStep)}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+                  {/* Hide the original animation controls */}
+                  <div style={{ display: 'none' }}>
+                    {renderAnimationControls()}
+                  </div>
+                  
+                  {/* Side-by-side view */}
+                  <Row 
+                    className="visualization-row" 
+                    gutter={16}
+                    style={{ flex: 1, minHeight: 0, display: 'flex', height: '100%' }}
+                  >
+                    <Col span={12} style={{ display: 'flex', flexDirection: 'column', minHeight: 0, height: '100%' }}>
+                      <div className={`step-container previous-step-container previous-step ${getTransitionClassName(previousStep, currentStep)}`}>
+                        {renderStepTable(previousStep, false)}
+                      </div>
+                    </Col>
+                    <Col span={12} style={{ display: 'flex', flexDirection: 'column', minHeight: 0, height: '100%' }}>
+                      <div className={`step-container current-step-container current-step ${getTransitionClassName(previousStep, currentStep)}`}>
+                        {renderStepTable(currentStep, true)}
+                      </div>
+                    </Col>
+                  </Row>
+                </div>
+              )}
+            </div>
+          )}
+        </Card>
+      )}
+    </div>
   );
 };
 
