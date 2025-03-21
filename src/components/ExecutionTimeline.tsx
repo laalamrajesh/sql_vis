@@ -1,5 +1,6 @@
 import React from 'react';
-import { Card, Steps, Button, Space, Slider, Row, Col, Tooltip } from 'antd';
+import { Card, Steps, Button, Space, Slider, Row, Col } from 'antd';
+import type { StepProps } from 'antd';
 import { 
   DatabaseOutlined, 
   FilterOutlined, 
@@ -7,11 +8,7 @@ import {
   GroupOutlined, 
   ColumnWidthOutlined, 
   SortAscendingOutlined, 
-  OrderedListOutlined,
-  StepBackwardOutlined,
-  StepForwardOutlined,
-  PauseOutlined,
-  PlayCircleOutlined
+  OrderedListOutlined
 } from '@ant-design/icons';
 import { useAppStore, ExecutionStep } from '../store/appStore';
 import { AnimationController } from '../animations/animationController';
@@ -47,18 +44,16 @@ const ExecutionTimeline: React.FC = () => {
   
   // Format step item for Steps component - simplified for mobile
   const getStepItems = () => {
-    const isMobile = window.innerWidth <= 768;
-    
     return executionSteps.map((step: ExecutionStep, index: number) => ({
       title: step.type,
-      description: isMobile ? null : step.description,
+      description: step.description,
       icon: getStepIcon(step.type),
-      status: getStepStatus(index)
+      status: getStepStatus(index) as StepProps['status']
     }));
   };
   
   // Determine step status based on current execution state
-  const getStepStatus = (index: number) => {
+  const getStepStatus = (index: number): 'wait' | 'process' | 'finish' | 'error' => {
     if (executionState === 'idle') {
       return 'wait';
     }
@@ -89,21 +84,8 @@ const ExecutionTimeline: React.FC = () => {
     animationController.prevStep();
   };
   
-  const handlePlayPause = () => {
-    if (executionState === 'running') {
-      animationController.pause();
-    } else {
-      animationController.play();
-    }
-  };
-  
   const handleSliderChange = (value: number) => {
     animationController.goToStep(value);
-  };
-  
-  // Control animation speed
-  const handleSpeedChange = (value: number) => {
-    animationController.setSpeed(value);
   };
   
   // Show timeline only when there are execution steps
@@ -111,15 +93,31 @@ const ExecutionTimeline: React.FC = () => {
     return null;
   }
   
+  // Create marks for the slider
+  const sliderMarks: Record<number, string> = {};
+  if (executionSteps.length > 0) {
+    sliderMarks[0] = executionSteps[0].type;
+    if (executionSteps.length > 1) {
+      sliderMarks[executionSteps.length - 1] = executionSteps[executionSteps.length - 1].type;
+    }
+  }
+  
   return (
     <Card className="execution-timeline-card">
-      <div className="timeline-container">
+      <div className="timeline-container" style={{ marginBottom: '20px' }}>
         <Steps 
           current={currentStepIndex} 
           items={getStepItems()}
           onChange={handleStepClick}
-          size={window.innerWidth <= 576 ? "small" : "default"}
-          responsive={true}
+          size="default"
+          direction="horizontal"
+          responsive={false}
+          className="execution-steps"
+          style={{ 
+            overflowX: 'visible', 
+            width: '100%',
+            position: 'relative'
+          }}
         />
       </div>
       
@@ -132,51 +130,28 @@ const ExecutionTimeline: React.FC = () => {
               value={currentStepIndex}
               onChange={handleSliderChange}
               step={1}
-              tooltip={{ formatter: (value) => executionSteps[value]?.type || 'Step' }}
-              marks={window.innerWidth > 576 ? {
-                0: executionSteps[0]?.type || 'Start',
-                [executionSteps.length - 1]: executionSteps[executionSteps.length - 1]?.type || 'End'
-              } : {}}
+              tooltip={{ formatter: (value: any) => executionSteps[value]?.type || 'Step' }}
+              marks={sliderMarks}
             />
           </Col>
           <Col xs={24} md={8}>
-            <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '8px' }}>
-              <Tooltip title="Previous Step">
-                <Button 
-                  icon={<StepBackwardOutlined />}
-                  onClick={handlePrevStep}
-                  disabled={currentStepIndex <= 0}
-                />
-              </Tooltip>
-              <Tooltip title={executionState === 'running' ? 'Pause' : 'Play'}>
-                <Button 
-                  icon={executionState === 'running' ? <PauseOutlined /> : <PlayCircleOutlined />}
-                  onClick={handlePlayPause}
-                  type="primary"
-                  shape="circle"
-                  size="large"
-                />
-              </Tooltip>
-              <Tooltip title="Next Step">
-                <Button 
-                  icon={<StepForwardOutlined />}
-                  onClick={handleNextStep}
-                  disabled={currentStepIndex >= executionSteps.length - 1}
-                />
-              </Tooltip>
-              <Tooltip title="Animation Speed">
-                <div className="speed-slider">
-                  <span>Speed:</span>
-                  <Slider
-                    min={0.5}
-                    max={2}
-                    step={0.25}
-                    defaultValue={1}
-                    onChange={handleSpeedChange}
-                    style={{ width: window.innerWidth <= 576 ? '80px' : '100px', marginLeft: 10 }}
-                  />
-                </div>
-              </Tooltip>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '16px' }}>
+              <Button 
+                type="primary"
+                onClick={handlePrevStep}
+                disabled={currentStepIndex <= 0}
+                style={{ width: '100px' }}
+              >
+                Previous
+              </Button>
+              <Button 
+                type="primary"
+                onClick={handleNextStep}
+                disabled={currentStepIndex >= executionSteps.length - 1}
+                style={{ width: '100px' }}
+              >
+                Next
+              </Button>
             </div>
           </Col>
         </Row>

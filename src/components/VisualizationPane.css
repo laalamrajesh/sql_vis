@@ -88,7 +88,7 @@
 /* Make the tables take just enough space needed */
 .table-container {
   position: relative;
-  overflow: auto;
+  overflow: visible !important;
   min-height: 0;
   flex: 1;
 }
@@ -294,6 +294,164 @@
 
 .ant-table-body {
   overflow-y: auto !important;
+  overflow-x: auto !important;
+  scroll-behavior: smooth;
+  max-height: 400px !important;
+  min-height: 200px !important;
+}
+
+/* Animation enhancements for SQL state transitions */
+
+/* FROM → WHERE animation effects */
+
+/* Animation styles for the source table (FROM) */
+.row-evaluating {
+  position: relative;
+  background-color: #e6f7ff !important;
+  z-index: 10;
+  box-shadow: 0 0 8px rgba(24, 144, 255, 0.6) !important;
+  transition: all 0.5s ease;
+  border: 2px solid #1890ff !important;
+}
+
+/* Make the highlighted row stand out more */
+.row-evaluating td {
+  font-weight: bold !important;
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+/* Styles for rows that have been evaluated */
+.row-passed {
+  background-color: rgba(82, 196, 26, 0.15) !important;
+  color: rgba(0, 0, 0, 0.85);
+}
+
+.row-failed {
+  background-color: rgba(245, 34, 45, 0.1) !important;
+  color: rgba(0, 0, 0, 0.45);
+  text-decoration: line-through;
+}
+
+/* Animation for rows entering the WHERE table */
+.row-entering {
+  animation: rowEnterAnimation 1s ease;
+}
+
+@keyframes rowEnterAnimation {
+  0% {
+    opacity: 0;
+    background-color: rgba(82, 196, 26, 0.3);
+  }
+  100% {
+    opacity: 1;
+    background-color: rgba(82, 196, 26, 0.1);
+  }
+}
+
+/* Animation controls */
+.animation-controls {
+  margin: 16px 0;
+}
+
+.start-animation-btn {
+  background-color: #1890ff;
+  color: white;
+  font-weight: 500;
+  border: none;
+  padding: 6px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.start-animation-btn:hover {
+  background-color: #40a9ff;
+}
+
+/* Condition evaluation info */
+.evaluation-info {
+  margin-top: 8px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  background-color: #fafafa;
+  overflow: hidden;
+  height: 40px;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+}
+
+.condition-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #f5f5f5;
+  padding: 8px 12px;
+  border-radius: 4px;
+  border-left: 4px solid #1890ff;
+  width: 100%;
   height: 100%;
-  max-height: unset !important;
+}
+
+.condition-expression {
+  flex: 1;
+}
+
+.condition-result {
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-weight: bold;
+  margin-left: 16px;
+  min-width: 80px;
+  text-align: center;
+}
+
+.condition-pass {
+  background-color: rgba(82, 196, 26, 0.2);
+  color: #52c41a;
+}
+
+.condition-fail {
+  background-color: rgba(245, 34, 45, 0.1);
+  color: #f5222d;
+}
+
+.condition-pending {
+  background-color: rgba(24, 144, 255, 0.1);
+  color: rgba(0, 0, 0, 0.45);
+}
+
+/* Custom styling for matched and filtered rows */
+.matched-row td:last-child {
+  position: relative;
+  color: #52c41a;
+  font-weight: bold;
+}
+
+.filtered-row td:last-child {
+  position: relative;
+  color: #f5222d;
+  font-weight: bold;
+}
+
+/* Custom pulse animation for the WHERE condition column */
+.from-to-where-transition .ant-table-thead > tr > th:last-child {
+  animation: whereColumnPulse 2.5s infinite alternate;
+}
+
+@keyframes whereColumnPulse {
+  0% {
+    background-color: rgba(250, 140, 22, 0.1);
+  }
+  100% {
+    background-color: rgba(250, 140, 22, 0.3);
+    box-shadow: 0 0 8px rgba(250, 140, 22, 0.4);
+  }
+}
+
+/* Add animations for other transitions as per guide */
+
+/* Add smooth scrolling to tables */
+.table-container .ant-table-body {
+  scroll-behavior: smooth;
 } 

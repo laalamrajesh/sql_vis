@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button, Card, Space, message } from 'antd';
 import CodeMirror from '@uiw/react-codemirror';
 import { sql } from '@codemirror/lang-sql';
-import { PlayCircleOutlined, PauseCircleOutlined, StopOutlined } from '@ant-design/icons';
+import { PlayCircleOutlined } from '@ant-design/icons';
 import { useAppStore } from '../store/appStore';
 import { parseQuery } from '../core/queryParser';
 import { AnimationController } from '../animations/animationController';
@@ -23,7 +23,8 @@ const SqlEditor: React.FC = () => {
     executionState,
     setExecutionState,
     resetExecution,
-    setError
+    setError,
+    setCurrentStepIndex
   } = useAppStore();
   
   const handleRunQuery = () => {
@@ -43,29 +44,20 @@ const SqlEditor: React.FC = () => {
       setCurrentQuery(queryText);
       setExecutionSteps(steps);
       
-      // Build and start the animation timeline
+      // Build timeline but don't auto-play it
       animationController.buildTimeline(steps);
-      animationController.play();
+      
+      // Set the initial step (FROM) and pause
+      if (steps.length > 0) {
+        setCurrentStepIndex(0);
+        setExecutionState('paused');
+      }
       
     } catch (error) {
       console.error('Error executing query:', error);
       setError(`${error}`);
       message.error('Error executing query');
     }
-  };
-  
-  const handlePauseResume = () => {
-    if (executionState === 'running') {
-      animationController.pause();
-    } else if (executionState === 'paused') {
-      animationController.play();
-    }
-  };
-  
-  const handleStop = () => {
-    animationController.goToStep(0);
-    resetExecution();
-    setExecutionState('idle');
   };
   
   return (
@@ -87,22 +79,6 @@ const SqlEditor: React.FC = () => {
             disabled={executionState === 'running'}
           >
             Run Query
-          </Button>
-          
-          <Button
-            icon={executionState === 'running' ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
-            onClick={handlePauseResume}
-            disabled={executionState !== 'running' && executionState !== 'paused'}
-          >
-            {executionState === 'running' ? 'Pause' : 'Resume'}
-          </Button>
-          
-          <Button
-            icon={<StopOutlined />}
-            onClick={handleStop}
-            disabled={executionState === 'idle'}
-          >
-            Stop
           </Button>
         </Space>
       </div>

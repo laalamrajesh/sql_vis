@@ -48,8 +48,8 @@ const App: React.FC = () => {
         </Sider>
         <Content className="app-content">
           <SqlEditor />
-          <VisualizationPane />
           <ExecutionTimeline />
+          <VisualizationPane />
         </Content>
       </Layout>
     </Layout>

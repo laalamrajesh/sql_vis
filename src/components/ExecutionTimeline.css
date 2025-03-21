@@ -5,6 +5,7 @@
   overflow: hidden;
   background-color: white;
   margin-top: auto; /* Push to bottom when in a flex container */
+  margin-bottom: 20px;
 }
 
 .execution-timeline-card .ant-card-body {
@@ -13,8 +14,8 @@
 }
 
 .timeline-container {
-  margin-bottom: 8px;
-  overflow-x: auto;
+  margin-bottom: 25px;
+  overflow: visible;
   padding-bottom: 4px;
   width: 100%;
   max-width: 100%;
@@ -24,7 +25,7 @@
 .timeline-controls {
   display: flex;
   justify-content: center;
-  margin-top: 8px;
+  margin-top: 20px;
   width: 100%;
   flex-wrap: wrap;
 }
@@ -169,4 +170,37 @@
   .timeline-controls {
     margin-top: 4px;
   }
+}
+
+/* Fix for step descriptions to ensure they are fully visible */
+.execution-steps .ant-steps-item-description {
+  max-height: none !important;
+  overflow: visible !important;
+  color: rgba(0, 0, 0, 0.65) !important;
+}
+
+/* Make step titles bold */
+.execution-steps .ant-steps-item-title {
+  font-weight: 500;
+}
+
+/* Ensure step icon containers have enough room */
+.execution-steps .ant-steps-item-icon {
+  margin-right: 12px;
+}
+
+/* Ensure step content has enough space */
+.execution-steps .ant-steps-item-content {
+  min-width: 120px;
+  margin-right: 20px;
+}
+
+/* Control spacing between steps */
+.execution-steps .ant-steps-item {
+  padding-right: 10px;
+}
+
+/* Make timeline control buttons consistent */
+.timeline-controls button {
+  min-width: 100px;
 } 

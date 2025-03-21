@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Upload, Button, message, Modal, Space, Tooltip, Progress } from 'antd';
-import { UploadOutlined, DatabaseOutlined, DownloadOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import { UploadOutlined, DatabaseOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { RcFile } from 'antd/lib/upload';
 import { useAppStore } from '../store/appStore';
-import { loadDatabaseFromFile, exportDatabaseToFile } from '../core/sqliteService';
+import { loadDatabaseFromFile } from '../core/sqliteService';
 import './DatabaseUploader.css';
 
 const { Dragger } = Upload;
@@ -109,37 +109,6 @@ const DatabaseUploader: React.FC = () => {
     }
   };
   
-  const handleExportDatabase = () => {
-    if (!database) {
-      message.error('No database to export');
-      return;
-    }
-    
-    try {
-      // Export the database to a Uint8Array
-      const uint8Array = exportDatabaseToFile(database);
-      
-      // Convert to a Blob and create a download URL
-      const blob = new Blob([uint8Array], { type: 'application/x-sqlite3' });
-      const url = URL.createObjectURL(blob);
-      
-      // Create a link and trigger the download
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'exported_database.sqlite';
-      document.body.appendChild(a);
-      a.click();
-      
-      // Clean up
-      URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      
-      message.success('Database exported successfully');
-    } catch (error) {
-      message.error(`Failed to export database: ${error}`);
-    }
-  };
-  
   const showUploadModal = () => {
     setIsModalVisible(true);
     setTableCount(null);
@@ -161,16 +130,6 @@ const DatabaseUploader: React.FC = () => {
             className="upload-database-btn"
           >
             Upload DB
-          </Button>
-        </Tooltip>
-        
-        <Tooltip title="Export Current Database">
-          <Button
-            icon={<DownloadOutlined />}
-            onClick={handleExportDatabase}
-            disabled={!database}
-          >
-            Export
           </Button>
         </Tooltip>
         
