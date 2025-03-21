@@ -33,17 +33,29 @@ const VisualizationPane: React.FC = () => {
   const [currentSelectColumn, setCurrentSelectColumn] = useState<number | null>(null);
   const [selectedColumns, setSelectedColumns] = useState<number[]>([]);
   
+  // Define all transition states using useState
+  const [isFromToWhereTransition, setIsFromToWhereTransition] = useState(false);
+  const [isWhereToOrderByTransition, setIsWhereToOrderByTransition] = useState(false);
+  const [isOrderByToLimitTransition, setIsOrderByToLimitTransition] = useState(false);
+  const [isLimitToSelectTransition, setIsLimitToSelectTransition] = useState(false);
+  const [isFromToOrderByTransition, setIsFromToOrderByTransition] = useState(false);
+  
   // Get the current step being visualized
   const currentStep = executionSteps[currentStepIndex];
   
   // Get the previous step (if exists)
   const previousStep = currentStepIndex > 0 ? executionSteps[currentStepIndex - 1] : null;
   
-  // Determine if we're transitioning between different steps
-  const isFromToWhereTransition = previousStep?.type === 'FROM' && currentStep?.type === 'WHERE';
-  const isWhereToOrderByTransition = previousStep?.type === 'WHERE' && currentStep?.type === 'ORDER BY';
-  const isOrderByToLimitTransition = previousStep?.type === 'ORDER BY' && currentStep?.type === 'LIMIT';
-  const isLimitToSelectTransition = previousStep?.type === 'LIMIT' && currentStep?.type === 'SELECT';
+  // Update in useEffect for step transition detection
+  useEffect(() => {
+    if (previousStep && currentStep) {
+      setIsFromToWhereTransition(previousStep.type === 'FROM' && currentStep.type === 'WHERE');
+      setIsWhereToOrderByTransition(previousStep.type === 'WHERE' && currentStep.type === 'ORDER BY');
+      setIsOrderByToLimitTransition(previousStep.type === 'ORDER BY' && currentStep.type === 'LIMIT');
+      setIsLimitToSelectTransition(previousStep.type === 'LIMIT' && currentStep.type === 'SELECT');
+      setIsFromToOrderByTransition(previousStep.type === 'FROM' && currentStep.type === 'ORDER BY');
+    }
+  }, [previousStep, currentStep]);
   
   // Reset animation state when steps change
   useEffect(() => {
@@ -53,7 +65,7 @@ const VisualizationPane: React.FC = () => {
       setAnimationInProgress(false);
     }
     
-    if (isWhereToOrderByTransition) {
+    if (isWhereToOrderByTransition || isFromToOrderByTransition) {
       setCurrentSortingRow(null);
       setSortedRows([]);
       setSortingInProgress(false);
@@ -70,7 +82,7 @@ const VisualizationPane: React.FC = () => {
       setSelectedColumns([]);
       setSelectingInProgress(false);
     }
-  }, [currentStepIndex]);
+  }, [currentStepIndex, isFromToWhereTransition, isWhereToOrderByTransition, isFromToOrderByTransition, isOrderByToLimitTransition, isLimitToSelectTransition]);
   
   // Animation for FROM to WHERE transition
   const startFromToWhereAnimation = () => {
@@ -487,7 +499,95 @@ const VisualizationPane: React.FC = () => {
   
   // Get the data for ORDER BY table
   const getOrderByTableData = () => {
-    if (!currentStep || !isWhereToOrderByTransition || !previousStep) {
+    if (!currentStep) {
+      return [];
+    }
+    
+    // Handle direct FROM to ORDER BY transition
+    if (isFromToOrderByTransition && previousStep) {
+      // Get FROM data
+      const fromData = generateDataSource(previousStep?.data || []);
+      
+      // Get the ORDER BY info
+      const orderByInfo = currentStep?.metadata?.orderByColumns || 'age DESC';
+      
+      // Parse ORDER BY columns and directions - handle multiple columns
+      const orderByColumns = parseOrderByColumns(orderByInfo);
+      
+      if (orderByColumns.length === 0) {
+        console.error('No valid ORDER BY columns found');
+        return fromData;
+      }
+      
+      // Find column indices for all ORDER BY columns
+      const orderColumnIndices = orderByColumns.map((col: { column: string; isDescending: boolean }) => {
+        const index = previousStep?.data[0]?.columns.findIndex(
+          (colName: string) => colName.toLowerCase() === col.column.toLowerCase()
+        );
+        
+        if (index === -1) {
+          console.error(`Order by column '${col.column}' not found`);
+        }
+        
+        return {
+          index,
+          isDescending: col.isDescending
+        };
+      }).filter(col => col.index !== -1);
+      
+      if (orderColumnIndices.length === 0) {
+        console.error('All ORDER BY columns not found');
+        return fromData;
+      }
+      
+      // Create row references with original indices
+      const rowsToSort = fromData.map((row: any, index: number) => ({
+        originalIndex: index,
+        // Store values for all sort columns
+        values: orderColumnIndices.map(col => row[`col_${col.index}`]),
+        row
+      }));
+      
+      // Sort rows based on multiple ORDER BY columns
+      const sortedRowObjects = [...rowsToSort].sort((a: any, b: any) => {
+        // Go through each sort column in order
+        for (let i = 0; i < orderColumnIndices.length; i++) {
+          const { isDescending } = orderColumnIndices[i];
+          const aVal = a.values[i];
+          const bVal = b.values[i];
+          
+          // Skip if values are equal and try next column
+          if (aVal === bVal) continue;
+          
+          // Determine sort order based on column direction
+          if (isDescending) {
+            return bVal > aVal ? 1 : -1;
+          } else {
+            return aVal > bVal ? 1 : -1;
+          }
+        }
+        return 0; // All values are equal
+      });
+      
+      // If we're not in animation mode, return fully sorted data
+      if (!sortingInProgress) {
+        // Return sorted data immediately
+        return sortedRowObjects.map(item => item.row);
+      }
+      
+      // During animation, only show the rows that have been processed so far
+      // Convert sortedRows indices to actual data objects
+      const animatedSortedRows = sortedRows.map(originalIndex => {
+        // Find the corresponding sorted row
+        const sortedRow = sortedRowObjects.find(obj => obj.originalIndex === originalIndex);
+        return sortedRow ? sortedRow.row : null;
+      }).filter(row => row !== null);
+      
+      return animatedSortedRows;
+    }
+    
+    // If not in FROM to ORDER BY transition, use existing logic
+    if (!isWhereToOrderByTransition || !previousStep) {
       // When not in transition, just show the data
       return generateDataSource(currentStep?.data || []);
     }
@@ -917,6 +1017,33 @@ const VisualizationPane: React.FC = () => {
       className += ' during-column-selection';
     }
     
+    // FROM to ORDER BY transition - add row styling
+    else if (isFromToOrderByTransition) {
+      if (!sortingInProgress) {
+        return className;
+      }
+      
+      // In the FROM table
+      if (!tableIsCurrentStep) {
+        // Highlight the row currently being processed for sorting
+        if (index === currentSortingRow) {
+          className += ' row-sorting';
+        }
+        
+        // Mark rows that have been processed for sorting
+        if (sortedRows.includes(index)) {
+          className += ' row-sorted';
+        }
+      } 
+      // In the ORDER BY table
+      else {
+        // Add animation for rows being added to the sorted table
+        if (index < sortedRows.length) {
+          className += ' row-entering-sorted';
+        }
+      }
+    }
+    
     return className;
   };
   
@@ -1007,7 +1134,7 @@ const VisualizationPane: React.FC = () => {
       const orderByColumns = parseOrderByColumns(orderByInfo);
       
       // Get column names only
-      const orderByColumnNames = orderByColumns.map(col => col.column.toLowerCase());
+      const orderByColumnNames = orderByColumns.map((col: { column: string; isDescending: boolean }) => col.column.toLowerCase());
       
       columns = columns.map((col: any) => {
         if (orderByColumnNames.includes(col.title.toLowerCase())) {
@@ -1145,6 +1272,11 @@ const VisualizationPane: React.FC = () => {
         return generateDataSource(step.data);
       }
       
+      // FROM step when transitioning to ORDER BY - show original data
+      if (step.type === 'FROM' && currentStep?.type === 'ORDER BY') {
+        return generateDataSource(step.data);
+      }
+      
       // WHERE step when transitioning to ORDER BY - show only rows that passed the condition
       if (step.type === 'WHERE' && currentStep?.type === 'ORDER BY') {
         const data = generateDataSource(step.data);
@@ -1176,6 +1308,11 @@ const VisualizationPane: React.FC = () => {
     // WHERE table during FROM->WHERE transition
     if (isFromToWhereTransition && step.type === 'WHERE') {
       return getWhereTableData();
+    }
+    
+    // ORDER BY table during FROM->ORDER BY transition
+    if (isFromToOrderByTransition && step.type === 'ORDER BY') {
+      return getOrderByTableData();
     }
     
     // ORDER BY table during WHERE->ORDER BY transition
@@ -1312,6 +1449,17 @@ const VisualizationPane: React.FC = () => {
       );
     } 
     
+    if (isFromToOrderByTransition && !sortingInProgress) {
+      return (
+        <button 
+          className="start-animation-btn" 
+          onClick={startFromToOrderByAnimation}
+        >
+          Start Visualization
+        </button>
+      );
+    }
+    
     if (isWhereToOrderByTransition && !sortingInProgress) {
       return (
         <button 
@@ -1363,6 +1511,114 @@ const VisualizationPane: React.FC = () => {
         isDescending
       };
     });
+  };
+  
+  // Add the animation function for FROM to ORDER BY transition
+  const startFromToOrderByAnimation = () => {
+    if (!previousStep || !currentStep || sortingInProgress) return;
+    
+    setSortingInProgress(true);
+    
+    // Get FROM data (unfiltered)
+    const fromData = generateDataSource(previousStep?.data || []);
+    
+    // Get the ORDER BY info
+    const orderByInfo = currentStep?.metadata?.orderByColumns || 'age DESC';
+    
+    // Parse ORDER BY columns and directions - handle multiple columns
+    const orderByColumns = parseOrderByColumns(orderByInfo);
+    
+    if (orderByColumns.length === 0) {
+      console.error('No valid ORDER BY columns found');
+      setSortingInProgress(false);
+      return;
+    }
+    
+    // Find column indices for all ORDER BY columns
+    const orderColumnIndices = orderByColumns.map((col: { column: string; isDescending: boolean }) => {
+      const index = previousStep?.data[0]?.columns.findIndex(
+        (colName: string) => colName.toLowerCase() === col.column.toLowerCase()
+      );
+      
+      if (index === -1) {
+        console.error(`Order by column '${col.column}' not found`);
+      }
+      
+      return {
+        index,
+        isDescending: col.isDescending
+      };
+    }).filter(col => col.index !== -1);
+    
+    if (orderColumnIndices.length === 0) {
+      console.error('All ORDER BY columns not found');
+      setSortingInProgress(false);
+      return;
+    }
+    
+    // Create row references with original indices
+    const rowsToSort = fromData.map((row: any, index: number) => ({
+      originalIndex: index,
+      // Store values for all sort columns
+      values: orderColumnIndices.map(col => row[`col_${col.index}`]),
+      row
+    }));
+    
+    // Sort rows based on multiple ORDER BY columns
+    rowsToSort.sort((a: any, b: any) => {
+      // Go through each sort column in order
+      for (let i = 0; i < orderColumnIndices.length; i++) {
+        const { isDescending } = orderColumnIndices[i];
+        const aVal = a.values[i];
+        const bVal = b.values[i];
+        
+        // Skip if values are equal and try next column
+        if (aVal === bVal) continue;
+        
+        // Determine sort order based on column direction
+        if (isDescending) {
+          return bVal > aVal ? 1 : -1;
+        } else {
+          return aVal > bVal ? 1 : -1;
+        }
+      }
+      return 0; // All values are equal
+    });
+    
+    // Get original indices in sorted order
+    const sortedIndices = rowsToSort.map((row: any) => row.originalIndex);
+    
+    // Initialize with first row
+    setCurrentSortingRow(0);
+    setSortedRows([]);
+    
+    // Start animation to sequentially add rows in sorted order
+    const animateRows = (index: number) => {
+      if (index >= sortedIndices.length) {
+        // Animation complete
+        setTimeout(() => {
+          setSortingInProgress(false);
+          setCurrentSortingRow(null);
+        }, 500);
+        return;
+      }
+      
+      // Update state to show current row being processed
+      setCurrentSortingRow(sortedIndices[index]);
+      
+      // Add row to sorted list after a delay
+      setTimeout(() => {
+        setSortedRows(prev => [...prev, sortedIndices[index]]);
+        
+        // Move to next row after another delay
+        setTimeout(() => {
+          animateRows(index + 1);
+        }, 750); // Standardized delay
+      }, 750); // Standardized delay for highlighting
+    };
+    
+    // Start the animation sequence
+    animateRows(0);
   };
   
   // Main render function
