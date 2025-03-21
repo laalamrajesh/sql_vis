@@ -689,4 +689,26 @@
 /* Table cell padding reduction */
 .ant-table-cell {
   padding: 6px 8px !important;
+}
+
+.sorting-column {
+  background-color: rgba(255, 193, 7, 0.15) !important; /* Light amber */
+  font-weight: 600 !important;
+  position: relative;
+}
+
+.sorting-column::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 2px solid #ffc107; /* Amber border */
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+.sorting-column .ant-table-column-title {
+  color: #d48806; /* Darker amber for text */
 } 

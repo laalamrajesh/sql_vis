@@ -101,16 +101,34 @@ const VisualizationPane: React.FC = () => {
     
     // Get the ORDER BY info
     const orderByInfo = currentStep?.metadata?.orderByColumns || 'age DESC';
-    const [orderByColumn, orderDirection] = orderByInfo.split(' ');
-    const isDescending = orderDirection === 'DESC';
     
-    // Find the column index for the ORDER BY column
-    const orderColumnIndex = previousStep?.data[0]?.columns.findIndex(
-      (col: string) => col.toLowerCase() === orderByColumn.toLowerCase()
-    );
+    // Parse ORDER BY columns and directions - handle multiple columns
+    const orderByColumns = parseOrderByColumns(orderByInfo);
     
-    if (orderColumnIndex === -1) {
-      console.error('Order by column not found');
+    if (orderByColumns.length === 0) {
+      console.error('No valid ORDER BY columns found');
+      setSortingInProgress(false);
+      return;
+    }
+    
+    // Find column indices for all ORDER BY columns
+    const orderColumnIndices = orderByColumns.map((col: { column: string; isDescending: boolean }) => {
+      const index = previousStep?.data[0]?.columns.findIndex(
+        (colName: string) => colName.toLowerCase() === col.column.toLowerCase()
+      );
+      
+      if (index === -1) {
+        console.error(`Order by column '${col.column}' not found`);
+      }
+      
+      return {
+        index,
+        isDescending: col.isDescending
+      };
+    }).filter(col => col.index !== -1);
+    
+    if (orderColumnIndices.length === 0) {
+      console.error('All ORDER BY columns not found');
       setSortingInProgress(false);
       return;
     }
@@ -118,20 +136,34 @@ const VisualizationPane: React.FC = () => {
     // Create row references with original indices
     const rowsToSort = filteredWhereData.map((row: any, index: number) => ({
       originalIndex: index,
-      value: row[`col_${orderColumnIndex}`],
+      // Store values for all sort columns
+      values: orderColumnIndices.map(col => row[`col_${col.index}`]),
+      row
     }));
     
-    // Sort rows based on the order by column
-    rowsToSort.sort((a: {originalIndex: number, value: any}, b: {originalIndex: number, value: any}) => {
-      if (isDescending) {
-        return b.value > a.value ? 1 : -1;
-      } else {
-        return a.value > b.value ? 1 : -1;
+    // Sort rows based on multiple ORDER BY columns
+    rowsToSort.sort((a: any, b: any) => {
+      // Go through each sort column in order
+      for (let i = 0; i < orderColumnIndices.length; i++) {
+        const { isDescending } = orderColumnIndices[i];
+        const aVal = a.values[i];
+        const bVal = b.values[i];
+        
+        // Skip if values are equal and try next column
+        if (aVal === bVal) continue;
+        
+        // Determine sort order based on column direction
+        if (isDescending) {
+          return bVal > aVal ? 1 : -1;
+        } else {
+          return aVal > bVal ? 1 : -1;
+        }
       }
+      return 0; // All values are equal
     });
     
     // Get original indices in sorted order
-    const sortedIndices = rowsToSort.map((row: {originalIndex: number, value: any}) => row.originalIndex);
+    const sortedIndices = rowsToSort.map((row: any) => row.originalIndex);
     
     // Initialize with first row
     setCurrentSortingRow(0);
@@ -450,7 +482,7 @@ const VisualizationPane: React.FC = () => {
     const evaluatedIndices = Object.keys(evaluatedRows).map(index => parseInt(index));
     
     // Return data for all evaluated rows, but mark them as passing/failing using CSS classes
-    return whereData.filter((_, index) => evaluatedIndices.includes(index));
+    return whereData.filter((_: any, index: number) => evaluatedIndices.includes(index));
   };
   
   // Get the data for ORDER BY table
@@ -475,33 +507,63 @@ const VisualizationPane: React.FC = () => {
     
     // Get the ORDER BY info
     const orderByInfo = currentStep?.metadata?.orderByColumns || 'age DESC';
-    const [orderByColumn, orderDirection] = orderByInfo.split(' ');
-    const isDescending = orderDirection === 'DESC';
     
-    // Find the column index for the ORDER BY column
-    const orderColumnIndex = previousStep?.data[0]?.columns.findIndex(
-      (col: string) => col.toLowerCase() === orderByColumn.toLowerCase()
-    );
+    // Parse ORDER BY columns and directions - handle multiple columns
+    const orderByColumns = parseOrderByColumns(orderByInfo);
     
-    if (orderColumnIndex === -1) {
-      console.error('Order by column not found');
+    if (orderByColumns.length === 0) {
+      console.error('No valid ORDER BY columns found');
+      return filteredWhereData;
+    }
+    
+    // Find column indices for all ORDER BY columns
+    const orderColumnIndices = orderByColumns.map((col: { column: string; isDescending: boolean }) => {
+      const index = previousStep?.data[0]?.columns.findIndex(
+        (colName: string) => colName.toLowerCase() === col.column.toLowerCase()
+      );
+      
+      if (index === -1) {
+        console.error(`Order by column '${col.column}' not found`);
+      }
+      
+      return {
+        index,
+        isDescending: col.isDescending
+      };
+    }).filter(col => col.index !== -1);
+    
+    if (orderColumnIndices.length === 0) {
+      console.error('All ORDER BY columns not found');
       return filteredWhereData;
     }
     
     // Create row references with original indices
     const rowsToSort = filteredWhereData.map((row: any, index: number) => ({
       originalIndex: index,
-      value: row[`col_${orderColumnIndex}`],
-      row: row // Keep reference to the original row
+      // Store values for all sort columns
+      values: orderColumnIndices.map(col => row[`col_${col.index}`]),
+      row
     }));
     
-    // Sort rows based on the order by column
+    // Sort rows based on multiple ORDER BY columns
     const sortedRowObjects = [...rowsToSort].sort((a: any, b: any) => {
-      if (isDescending) {
-        return b.value > a.value ? 1 : -1;
-      } else {
-        return a.value > b.value ? 1 : -1;
+      // Go through each sort column in order
+      for (let i = 0; i < orderColumnIndices.length; i++) {
+        const { isDescending } = orderColumnIndices[i];
+        const aVal = a.values[i];
+        const bVal = b.values[i];
+        
+        // Skip if values are equal and try next column
+        if (aVal === bVal) continue;
+        
+        // Determine sort order based on column direction
+        if (isDescending) {
+          return bVal > aVal ? 1 : -1;
+        } else {
+          return aVal > bVal ? 1 : -1;
+        }
       }
+      return 0; // All values are equal
     });
     
     // If we're not in animation mode, return fully sorted data
@@ -536,7 +598,7 @@ const VisualizationPane: React.FC = () => {
     // During animation or after, show all selected rows at once
     if (limitingInProgress || true) {
       return orderByData
-        .filter((_, index: number) => index >= offsetValue && index < offsetValue + limitValue);
+        .filter((_: any, index: number) => index >= offsetValue && index < offsetValue + limitValue);
     }
   };
   
@@ -711,7 +773,7 @@ const VisualizationPane: React.FC = () => {
       return null;
     }
     
-    const selectColumns = currentStep?.metadata?.selectColumns?.split(',' ).map(col => col.trim()) || [];
+    const selectColumns = currentStep?.metadata?.selectColumns?.split(',').map((col: string) => col.trim()) || [];
     
     let message = `SELECT ${selectColumns.join(', ')}`;
     
@@ -940,12 +1002,35 @@ const VisualizationPane: React.FC = () => {
     
     // Apply special column styling based on the transition
     if (isWhereToOrderByTransition && step.type === 'ORDER BY') {
-      // Highlight the order by column
+      // Highlight all order by columns
       const orderByInfo = step?.metadata?.orderByColumns || 'age DESC';
-      const [orderByColumn] = orderByInfo.split(' ');
+      const orderByColumns = parseOrderByColumns(orderByInfo);
+      
+      // Get column names only
+      const orderByColumnNames = orderByColumns.map(col => col.column.toLowerCase());
       
       columns = columns.map((col: any) => {
-        if (col.title.toLowerCase() === orderByColumn.toLowerCase()) {
+        if (orderByColumnNames.includes(col.title.toLowerCase())) {
+          return {
+            ...col,
+            className: 'sorting-column'
+          };
+        }
+        return col;
+      });
+    }
+    
+    // Also highlight the ORDER BY columns in the WHERE table (left side)
+    if (isWhereToOrderByTransition && !isCurrentStep && step.type === 'WHERE') {
+      // Highlight all order by columns in the left table
+      const orderByInfo = currentStep?.metadata?.orderByColumns || 'age DESC';
+      const orderByColumns = parseOrderByColumns(orderByInfo);
+      
+      // Get column names only
+      const orderByColumnNames = orderByColumns.map(col => col.column.toLowerCase());
+      
+      columns = columns.map((col: any) => {
+        if (orderByColumnNames.includes(col.title.toLowerCase())) {
           return {
             ...col,
             className: 'sorting-column'
@@ -1261,6 +1346,23 @@ const VisualizationPane: React.FC = () => {
     }
     
     return null;
+  };
+  
+  // Helper function to parse ORDER BY columns and their directions
+  const parseOrderByColumns = (orderByInfo: string) => {
+    // Split by comma to handle multiple columns
+    const columns = orderByInfo.split(',').map(col => col.trim());
+    
+    return columns.map(col => {
+      const parts = col.split(/\s+/);
+      const column = parts[0];
+      const isDescending = parts.length > 1 && parts[1].toUpperCase() === 'DESC';
+      
+      return {
+        column,
+        isDescending
+      };
+    });
   };
   
   // Main render function
