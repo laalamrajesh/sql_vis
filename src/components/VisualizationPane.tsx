@@ -268,8 +268,8 @@ const VisualizationPane: React.FC = () => {
         // Move to next column after another delay
         setTimeout(() => {
           animateColumns(index + 1);
-        }, 750); // Standardized delay
-      }, 750); // Standardized delay
+        }, 1500);
+      }, 1500);
     };
     
     // Start the animation sequence
@@ -547,60 +547,71 @@ const VisualizationPane: React.FC = () => {
     }
     
     const limitData = generateDataSource(previousStep.data || []);
-    
-    // Get LIMIT parameters from previous step
-    const limitValue = parseInt(previousStep?.metadata?.limit || '5');
-    const offsetValue = parseInt(previousStep?.metadata?.offset || '0');
+    console.log("SELECT DATA:", limitData); // Debug log
+    console.log("Selected Columns:", selectedColumns); // Debug log
     
     // Get columns from SELECT clause
     const selectColumns = currentStep?.metadata?.selectColumns?.split(',').map((col: string) => col.trim()) || [];
     const allColumns = previousStep?.data[0]?.columns || [];
+    console.log("SELECT Columns:", selectColumns); // Debug log
+    console.log("All Columns:", allColumns); // Debug log
     
     // Find indices of selected columns
-    const selectedIndices = selectColumns.map(selectCol => {
-      return allColumns.findIndex(col => col.toLowerCase() === selectCol.toLowerCase());
-    }).filter(index => index !== -1);
+    const selectedIndices = selectColumns.map((selectCol: string) => {
+      return allColumns.findIndex((col: string) => col.toLowerCase() === selectCol.toLowerCase());
+    }).filter((index: number) => index !== -1);
+    console.log("Selected Indices:", selectedIndices); // Debug log
     
-    // Filter to only show rows within the LIMIT range
-    const filteredData = limitData;
-    
-    // During animation, filter visible columns to only those selected so far
+    // During animation, show only the columns that have been selected so far
     if (selectingInProgress) {
-      // Create a copy of the data with only selected columns that are processed so far
-      return filteredData.map((row: any) => {
+      const result = limitData.map((row: any) => {
         const newRow = { ...row };
         
-        // For each column, keep only if it's in the selected columns and has been processed
+        // Keep original row key
+        newRow.key = row.key;
+        
+        // Process all columns
         Object.keys(row).forEach(key => {
           if (key.startsWith('col_')) {
             const colIndex = parseInt(key.replace('col_', ''));
+            
+            // If this column hasn't been selected yet in the animation, set to null
             if (!selectedColumns.includes(colIndex)) {
-              // Keep the property but set value to undefined if not yet selected
-              newRow[key] = undefined;
+              newRow[key] = null; // null will be rendered as "NULL" with special styling
             }
+            // Otherwise keep the original value which is already in newRow from spread
           }
         });
         
         return newRow;
       });
+      
+      console.log("Animation Result:", result); // Debug log
+      return result;
     }
     
-    // After animation, show only the columns that were selected
-    return filteredData.map((row: any) => {
+    // After animation, show only the selected columns
+    const result = limitData.map((row: any) => {
       const newRow = { ...row };
       
-      // For each column, keep only if it's in the selected columns
+      // Keep original row key
+      newRow.key = row.key;
+      
+      // For each column, remove it if it's not in the selected columns
       Object.keys(row).forEach(key => {
         if (key.startsWith('col_')) {
           const colIndex = parseInt(key.replace('col_', ''));
           if (!selectedIndices.includes(colIndex)) {
-            delete newRow[key];
+            delete newRow[key]; // Remove unselected columns
           }
         }
       });
       
       return newRow;
     });
+    
+    console.log("Final Result:", result); // Debug log
+    return result;
   };
   
   // Render the condition evaluation overlay when a row is being processed
@@ -700,7 +711,7 @@ const VisualizationPane: React.FC = () => {
       return null;
     }
     
-    const selectColumns = currentStep?.metadata?.selectColumns?.split(',').map(col => col.trim()) || [];
+    const selectColumns = currentStep?.metadata?.selectColumns?.split(',' ).map(col => col.trim()) || [];
     
     let message = `SELECT ${selectColumns.join(', ')}`;
     
@@ -975,6 +986,51 @@ const VisualizationPane: React.FC = () => {
     // Get the appropriate data for this step
     const dataSource = generateTableData(step, isCurrentStep);
     
+    // Debug output for SELECT table
+    if (isCurrentStep && step.type === 'SELECT') {
+      console.log("SELECT columns:", columns);
+      console.log("SELECT dataSource:", dataSource);
+      
+      // Special handling for SELECT table columns
+      // For SELECT, we need to create columns based on the selected columns from metadata
+      if (currentStep?.metadata?.selectColumns) {
+        const selectColumns = currentStep.metadata.selectColumns.split(',').map((col: string) => col.trim());
+        const allColumns = previousStep?.data[0]?.columns || [];
+        
+        // Create new columns array that maps correctly to the data
+        columns = selectColumns.map((colName: string, idx: number) => {
+          // Find the index of this column in the original data
+          const originalColIndex = allColumns.findIndex(
+            (originalCol: string) => originalCol.toLowerCase() === colName.toLowerCase()
+          );
+          
+          // Use the correct col_X dataIndex based on the original column position
+          return {
+            title: colName,
+            dataIndex: `col_${originalColIndex}`,
+            key: `col_${originalColIndex}`,
+            ellipsis: true,
+            width: calculateColumnWidth(colName, step.data[0]?.values || [], idx),
+            // Only apply highlighting classes if animation is in progress
+            className: selectingInProgress && selectedColumns.includes(originalColIndex) 
+                      ? 'selected-column' 
+                      : selectingInProgress 
+                        ? 'pending-column' 
+                        : '',
+            render: (text: any) => {
+              console.log(`Rendering ${colName} (col_${originalColIndex}): ${text}`);
+              if (text === null || text === 'NULL') {
+                return <span className="null-value">NULL</span>;
+              }
+              return text;
+            }
+          };
+        });
+        
+        console.log("Fixed SELECT columns:", columns);
+      }
+    }
+    
     // Apply special column styling based on the transition
     if (isWhereToOrderByTransition && step.type === 'ORDER BY') {
       // Highlight the order by column
@@ -992,19 +1048,69 @@ const VisualizationPane: React.FC = () => {
       });
     }
     
-    if (isLimitToSelectTransition && step.type === 'SELECT') {
-      // Highlight selected columns
-      const selectColumns = step?.metadata?.selectColumns?.split(',').map((col: string) => col.trim()) || [];
+    if (isLimitToSelectTransition) {
+      // Get columns from SELECT clause
+      const selectColumns = currentStep?.metadata?.selectColumns?.split(',').map((col: string) => col.trim()) || [];
       
-      columns = columns.map((col: any) => {
-        if (selectColumns.includes(col.title)) {
-          return {
-            ...col,
-            className: 'selected-column'
-          };
+      // Highlight selected columns in LIMIT table (left side) ONLY during animation
+      if (!isCurrentStep && step.type === 'LIMIT') {
+        columns = columns.map((col: any) => {
+          // Only apply highlighting classes if animation is in progress
+          if (selectingInProgress) {
+            if (selectColumns.includes(col.title)) {
+              return {
+                ...col,
+                className: currentSelectColumn !== null && 
+                          col.title === step.data[0]?.columns[currentSelectColumn]
+                          ? 'selecting-column' : 'selected-column'
+              };
+            }
+            return {
+              ...col,
+              className: 'unselected-column'
+            };
+          }
+          // No classes before animation starts
+          return col;
+        });
+      }
+      
+      // Special handling for SELECT table (right side)
+      if (isCurrentStep && step.type === 'SELECT') {
+        if (currentStep?.metadata?.selectColumns) {
+          const selectColumns = currentStep.metadata.selectColumns.split(',').map((col: string) => col.trim());
+          const allColumns = previousStep?.data[0]?.columns || [];
+          
+          // Create new columns array that maps correctly to the data
+          columns = selectColumns.map((colName: string, idx: number) => {
+            // Find the index of this column in the original data
+            const originalColIndex = allColumns.findIndex(
+              (originalCol: string) => originalCol.toLowerCase() === colName.toLowerCase()
+            );
+            
+            // Use the correct col_X dataIndex based on the original column position
+            return {
+              title: colName,
+              dataIndex: `col_${originalColIndex}`,
+              key: `col_${originalColIndex}`,
+              ellipsis: true,
+              width: calculateColumnWidth(colName, step.data[0]?.values || [], idx),
+              // Only apply highlighting classes if animation is in progress
+              className: selectingInProgress && selectedColumns.includes(originalColIndex) 
+                        ? 'selected-column' 
+                        : selectingInProgress 
+                          ? 'pending-column' 
+                          : '',
+              render: (text: any) => {
+                if (text === null || text === 'NULL') {
+                  return <span className="null-value">NULL</span>;
+                }
+                return text;
+              }
+            };
+          });
         }
-        return col;
-      });
+      }
     }
     
     // Add appropriate table CSS classes based on the transition

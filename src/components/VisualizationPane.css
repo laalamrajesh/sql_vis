@@ -609,4 +609,55 @@
     transform: translateY(0);
     background-color: transparent;
   }
+}
+
+/* SELECT animation styles */
+/* Selected column styling */
+.selected-column {
+  background-color: rgba(82, 196, 26, 0.15) !important;
+  color: #52c41a !important;
+  position: relative;
+}
+
+/* Column currently being selected */
+.selecting-column {
+  background-color: rgba(82, 196, 26, 0.3) !important;
+  color: #52c41a !important;
+  position: relative;
+  box-shadow: 0 0 8px rgba(82, 196, 26, 0.5) !important;
+  z-index: 10;
+}
+
+/* Columns not selected */
+.unselected-column {
+  opacity: 0.5;
+}
+
+/* Column pending selection in the SELECT table */
+.pending-column {
+  color: #d9d9d9 !important;
+  background-color: rgba(0, 0, 0, 0.02) !important;
+}
+
+/* Animation for showing columns being selected */
+.limit-to-select-transition .selecting-column,
+.limit-to-select-transition .selected-column {
+  animation: pulseSelectColumn 1.5s infinite alternate;
+}
+
+@keyframes pulseSelectColumn {
+  0% {
+    background-color: rgba(82, 196, 26, 0.1);
+  }
+  100% {
+    background-color: rgba(82, 196, 26, 0.3);
+    box-shadow: 0 0 8px rgba(82, 196, 26, 0.4);
+  }
+}
+
+/* Add this to ensure NULL values in the SELECT table are styled properly */
+.null-value {
+  color: #d9d9d9;
+  font-style: italic;
+  opacity: 0.7;
 } 
