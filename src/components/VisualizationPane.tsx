@@ -18,15 +18,32 @@ const VisualizationPane: React.FC = () => {
   const [evaluatedRows, setEvaluatedRows] = useState<{[key: number]: boolean}>({});
   const [animationInProgress, setAnimationInProgress] = useState(false);
   
+  // State for ORDER BY animation
+  const [sortingInProgress, setSortingInProgress] = useState(false);
+  const [currentSortingRow, setCurrentSortingRow] = useState<number | null>(null);
+  const [sortedRows, setSortedRows] = useState<number[]>([]);
+  
+  // State for LIMIT animation
+  const [limitingInProgress, setLimitingInProgress] = useState(false);
+  const [currentLimitRow, setCurrentLimitRow] = useState<number | null>(null);
+  const [limitedRows, setLimitedRows] = useState<number[]>([]);
+  
+  // State for SELECT animation
+  const [selectingInProgress, setSelectingInProgress] = useState(false);
+  const [currentSelectColumn, setCurrentSelectColumn] = useState<number | null>(null);
+  const [selectedColumns, setSelectedColumns] = useState<number[]>([]);
+  
   // Get the current step being visualized
   const currentStep = executionSteps[currentStepIndex];
   
   // Get the previous step (if exists)
   const previousStep = currentStepIndex > 0 ? executionSteps[currentStepIndex - 1] : null;
   
-  // Determine if we're transitioning from FROM to WHERE
-  const isFromToWhereTransition = 
-    previousStep?.type === 'FROM' && currentStep?.type === 'WHERE';
+  // Determine if we're transitioning between different steps
+  const isFromToWhereTransition = previousStep?.type === 'FROM' && currentStep?.type === 'WHERE';
+  const isWhereToOrderByTransition = previousStep?.type === 'WHERE' && currentStep?.type === 'ORDER BY';
+  const isOrderByToLimitTransition = previousStep?.type === 'ORDER BY' && currentStep?.type === 'LIMIT';
+  const isLimitToSelectTransition = previousStep?.type === 'LIMIT' && currentStep?.type === 'SELECT';
   
   // Reset animation state when steps change
   useEffect(() => {
@@ -34,6 +51,24 @@ const VisualizationPane: React.FC = () => {
       setCurrentRowIndex(null);
       setEvaluatedRows({});
       setAnimationInProgress(false);
+    }
+    
+    if (isWhereToOrderByTransition) {
+      setCurrentSortingRow(null);
+      setSortedRows([]);
+      setSortingInProgress(false);
+    }
+    
+    if (isOrderByToLimitTransition) {
+      setCurrentLimitRow(null);
+      setLimitedRows([]);
+      setLimitingInProgress(false);
+    }
+    
+    if (isLimitToSelectTransition) {
+      setCurrentSelectColumn(null);
+      setSelectedColumns([]);
+      setSelectingInProgress(false);
     }
   }, [currentStepIndex]);
   
@@ -48,16 +83,211 @@ const VisualizationPane: React.FC = () => {
     // The rest of the animation will be driven by the useEffect below
   };
   
-  // Process rows one by one
+  // Animation for WHERE to ORDER BY transition
+  const startWhereToOrderByAnimation = () => {
+    if (!previousStep || !currentStep || sortingInProgress) return;
+    
+    setSortingInProgress(true);
+    
+    // Get WHERE data (already filtered)
+    const whereData = generateDataSource(previousStep?.data || []);
+    
+    // Filter out rows that didn't pass WHERE
+    const filteredWhereData = whereData.filter((row: any) => {
+      const columns = generateColumns(previousStep?.data || []);
+      const conditionIndex = columns.length - 1;
+      return row[`col_${conditionIndex}`] === 1;
+    });
+    
+    // Get the ORDER BY info
+    const orderByInfo = currentStep?.metadata?.orderByColumns || 'age DESC';
+    const [orderByColumn, orderDirection] = orderByInfo.split(' ');
+    const isDescending = orderDirection === 'DESC';
+    
+    // Find the column index for the ORDER BY column
+    const orderColumnIndex = previousStep?.data[0]?.columns.findIndex(
+      (col: string) => col.toLowerCase() === orderByColumn.toLowerCase()
+    );
+    
+    if (orderColumnIndex === -1) {
+      console.error('Order by column not found');
+      setSortingInProgress(false);
+      return;
+    }
+    
+    // Create row references with original indices
+    const rowsToSort = filteredWhereData.map((row: any, index: number) => ({
+      originalIndex: index,
+      value: row[`col_${orderColumnIndex}`],
+    }));
+    
+    // Sort rows based on the order by column
+    rowsToSort.sort((a: {originalIndex: number, value: any}, b: {originalIndex: number, value: any}) => {
+      if (isDescending) {
+        return b.value > a.value ? 1 : -1;
+      } else {
+        return a.value > b.value ? 1 : -1;
+      }
+    });
+    
+    // Get original indices in sorted order
+    const sortedIndices = rowsToSort.map((row: {originalIndex: number, value: any}) => row.originalIndex);
+    
+    // Initialize with first row
+    setCurrentSortingRow(0);
+    setSortedRows([]);
+    
+    // Start animation to sequentially add rows in sorted order
+    const animateRows = (index: number) => {
+      if (index >= sortedIndices.length) {
+        // Animation complete
+        setTimeout(() => {
+          setSortingInProgress(false);
+          setCurrentSortingRow(null);
+        }, 500);
+        return;
+      }
+      
+      // Update state to show current row being processed
+      setCurrentSortingRow(sortedIndices[index]);
+      
+      // Add row to sorted list after a delay
+      setTimeout(() => {
+        setSortedRows(prev => [...prev, sortedIndices[index]]);
+        
+        // Move to next row after another delay
+        setTimeout(() => {
+          animateRows(index + 1);
+        }, 750); // Standardized delay
+      }, 750); // Standardized delay for highlighting
+    };
+    
+    // Start the animation sequence
+    animateRows(0);
+  };
+  
+  // Animation for ORDER BY to LIMIT transition
+  const startOrderByToLimitAnimation = () => {
+    if (!previousStep || !currentStep || limitingInProgress) return;
+    
+    setLimitingInProgress(true);
+    
+    // Get the ORDER BY data (already sorted)
+    const orderByData = generateDataSource(previousStep?.data || []);
+    if (!orderByData || orderByData.length === 0) {
+      setLimitingInProgress(false);
+      return;
+    }
+    
+    // Get the LIMIT value and offset (if any)
+    const limitValue = parseInt(currentStep?.metadata?.limit || '5');
+    const offsetValue = parseInt(currentStep?.metadata?.offset || '0');
+    
+    // First highlight all rows in the left table (marking included/excluded)
+    setCurrentLimitRow(null);
+    setLimitedRows([]);
+    
+    // Highlight all rows that will be included in the LIMIT
+    const includedRows: number[] = [];
+    for (let i = offsetValue; i < Math.min(offsetValue + limitValue, orderByData.length); i++) {
+      includedRows.push(i);
+    }
+    
+    // Show which rows are included and excluded in the source table
+    setTimeout(() => {
+      // Apply the row-limiting class to all rows in the source table
+      const orderByTable = document.querySelector('.order-by-table .ant-table-body');
+      if (orderByTable) {
+        orderByTable.scrollTop = 0; // Scroll to top to make included rows visible
+      }
+      
+      // Update state to mark all included rows
+      setLimitedRows(includedRows);
+      
+      // Finish the animation after a short delay
+      setTimeout(() => {
+        setLimitingInProgress(false);
+      }, 1000);
+    }, 500);
+  };
+  
+  // Animation for LIMIT to SELECT transition
+  const startLimitToSelectAnimation = () => {
+    if (!previousStep || !currentStep || selectingInProgress) return;
+    
+    setSelectingInProgress(true);
+    
+    // Get the LIMIT data (already limited)
+    const limitData = generateDataSource(previousStep?.data || []);
+    if (!limitData || limitData.length === 0) {
+      setSelectingInProgress(false);
+      return;
+    }
+    
+    // Get columns from SELECT clause
+    const selectColumns = currentStep?.metadata?.selectColumns?.split(',').map((col: string) => col.trim()) || [];
+    
+    // Find column indices for the selected columns
+    const columnIndices: number[] = [];
+    const allColumns = previousStep?.data[0]?.columns || [];
+    
+    selectColumns.forEach((selectCol: string) => {
+      const index = allColumns.findIndex((col: string) => col.toLowerCase() === selectCol.toLowerCase());
+      if (index !== -1) {
+        columnIndices.push(index);
+      }
+    });
+    
+    if (columnIndices.length === 0) {
+      console.error('No matching columns found for SELECT');
+      setSelectingInProgress(false);
+      return;
+    }
+    
+    // Start with empty selected columns
+    setSelectedColumns([]);
+    
+    // Animation to sequentially highlight and select columns
+    const animateColumns = (index: number) => {
+      if (index >= columnIndices.length) {
+        // Animation complete
+        setTimeout(() => {
+          setSelectingInProgress(false);
+          setCurrentSelectColumn(null);
+        }, 500);
+        return;
+      }
+      
+      // Update state to show current column being processed
+      setCurrentSelectColumn(columnIndices[index]);
+      
+      // Add column to selected set after a delay
+      setTimeout(() => {
+        setSelectedColumns(prev => [...prev, columnIndices[index]]);
+        
+        // Move to next column after another delay
+        setTimeout(() => {
+          animateColumns(index + 1);
+        }, 750); // Standardized delay
+      }, 750); // Standardized delay
+    };
+    
+    // Start the animation sequence
+    animateColumns(0);
+  };
+  
+  // Process rows one by one for FROM to WHERE
   useEffect(() => {
     if (!isFromToWhereTransition || currentRowIndex === null || !animationInProgress) return;
     
-    // Get the WHERE data to determine if the row passes or fails
+    // Get data for both FROM and WHERE tables
+    const fromData = generateDataSource(previousStep?.data || []);
     const whereData = generateDataSource(currentStep?.data || []);
-    if (!whereData || whereData.length === 0) return;
+    
+    if (!fromData || fromData.length === 0 || !whereData || whereData.length === 0) return;
     
     // Get maximum row index
-    const maxRows = whereData.length;
+    const maxRows = fromData.length;
     
     // If we've processed all rows, end the animation
     if (currentRowIndex >= maxRows) {
@@ -67,9 +297,13 @@ const VisualizationPane: React.FC = () => {
     }
     
     // Get the condition result for this row (1 = pass, 0 = fail)
-    const columns = generateColumns(currentStep?.data || []);
-    const conditionIndex = columns.length - 1;
-    const rowPasses = whereData[currentRowIndex][`col_${conditionIndex}`] === 1;
+    const conditionIndex = currentStep?.data[0]?.columns.findIndex(col => col === '_condition_result');
+    
+    // Determine if the current row passes the condition
+    let rowPasses = false;
+    if (conditionIndex !== -1 && whereData[currentRowIndex]) {
+      rowPasses = whereData[currentRowIndex][`col_${conditionIndex}`] === 1;
+    }
     
     // Simple scroll behavior - get the FROM table container
     const scrollFromTableToRow = () => {
@@ -77,7 +311,7 @@ const VisualizationPane: React.FC = () => {
       if (!tableBody) return;
       
       // Calculate the average row height (assuming all rows are similar height)
-      const rowHeight = tableBody.scrollHeight / whereData.length;
+      const rowHeight = tableBody.scrollHeight / fromData.length;
       
       // Calculate position to scroll to (accounting for header)
       const scrollPosition = currentRowIndex * rowHeight;
@@ -100,15 +334,13 @@ const VisualizationPane: React.FC = () => {
       // Move to the next row after a delay
       const nextRowTimeout = setTimeout(() => {
         setCurrentRowIndex(prev => (prev !== null ? prev + 1 : null));
-      }, 1500); // Longer delay to make animation more visible
+      }, 750); // Standardized delay
       
       return () => clearTimeout(nextRowTimeout);
-    }, 1800); // Longer delay for evaluation
+    }, 750); // Standardized delay for evaluation
     
     return () => clearTimeout(evaluationTimeout);
-  }, [currentRowIndex, animationInProgress, currentStep, isFromToWhereTransition]);
-  
-  // No automatic scrolling when step changes - removing this effect
+  }, [currentRowIndex, animationInProgress, currentStep, previousStep, isFromToWhereTransition]);
   
   // Helper function to generate columns for the Table component
   const generateColumns = (data: any) => {
@@ -192,25 +424,182 @@ const VisualizationPane: React.FC = () => {
   
   // Filter the WHERE data to only show rows that passed evaluation
   const getWhereTableData = () => {
-    if (!currentStep || !isFromToWhereTransition) {
+    if (!currentStep || !isFromToWhereTransition || !previousStep) {
       // When not in transition or animation is complete, show all data
       return generateDataSource(currentStep?.data || []);
     }
     
-    // Initially show all passing rows, but during animation only show processed ones
-    const allData = generateDataSource(currentStep.data);
+    // Get all data for both tables
+    const fromData = generateDataSource(previousStep.data || []);
+    const whereData = generateDataSource(currentStep.data || []);
+    
+    // Get the condition result column index
+    const conditionIndex = currentStep.data[0]?.columns.findIndex(col => col === '_condition_result');
     
     if (!animationInProgress) {
-      // Before animation starts, show all rows that would pass the condition
-      return allData.filter((row: any) => {
-        const lastColumnIndex = Object.keys(row).length - 2; // -2 because of key and 0-indexing
-        return row[`col_${lastColumnIndex}`] === 1;
+      // Before animation starts, show filtered data based on condition
+      if (conditionIndex !== -1) {
+        // Show only rows that passed the condition
+        return whereData.filter(row => row[`col_${conditionIndex}`] === 1);
+      }
+      return whereData;
+    }
+    
+    // During animation - include ALL rows that have been evaluated (both pass and fail)
+    // This ensures immediate visual feedback for each evaluation
+    const evaluatedIndices = Object.keys(evaluatedRows).map(index => parseInt(index));
+    
+    // Return data for all evaluated rows, but mark them as passing/failing using CSS classes
+    return whereData.filter((_, index) => evaluatedIndices.includes(index));
+  };
+  
+  // Get the data for ORDER BY table
+  const getOrderByTableData = () => {
+    if (!currentStep || !isWhereToOrderByTransition || !previousStep) {
+      // When not in transition, just show the data
+      return generateDataSource(currentStep?.data || []);
+    }
+    
+    // Get the filtered data from WHERE step
+    const whereData = generateDataSource(previousStep?.data || []);
+    
+    // Filter out rows that didn't pass WHERE
+    const conditionIndex = previousStep?.data[0]?.columns.findIndex(
+      (col: string) => col === '_condition_result'
+    );
+    
+    // Get only rows that passed the WHERE condition
+    const filteredWhereData = conditionIndex !== -1 ? 
+      whereData.filter((row: any) => row[`col_${conditionIndex}`] === 1) : 
+      whereData;
+    
+    // Get the ORDER BY info
+    const orderByInfo = currentStep?.metadata?.orderByColumns || 'age DESC';
+    const [orderByColumn, orderDirection] = orderByInfo.split(' ');
+    const isDescending = orderDirection === 'DESC';
+    
+    // Find the column index for the ORDER BY column
+    const orderColumnIndex = previousStep?.data[0]?.columns.findIndex(
+      (col: string) => col.toLowerCase() === orderByColumn.toLowerCase()
+    );
+    
+    if (orderColumnIndex === -1) {
+      console.error('Order by column not found');
+      return filteredWhereData;
+    }
+    
+    // Create row references with original indices
+    const rowsToSort = filteredWhereData.map((row: any, index: number) => ({
+      originalIndex: index,
+      value: row[`col_${orderColumnIndex}`],
+      row: row // Keep reference to the original row
+    }));
+    
+    // Sort rows based on the order by column
+    const sortedRowObjects = [...rowsToSort].sort((a: any, b: any) => {
+      if (isDescending) {
+        return b.value > a.value ? 1 : -1;
+      } else {
+        return a.value > b.value ? 1 : -1;
+      }
+    });
+    
+    // If we're not in animation mode, return fully sorted data
+    if (!sortingInProgress) {
+      // Return sorted data immediately
+      return sortedRowObjects.map(item => item.row);
+    }
+    
+    // During animation, only show the rows that have been processed so far
+    // Convert sortedRows indices to actual data objects
+    const animatedSortedRows = sortedRows.map(originalIndex => {
+      // Find the corresponding sorted row
+      const sortedRow = sortedRowObjects.find(obj => obj.originalIndex === originalIndex);
+      return sortedRow ? sortedRow.row : null;
+    }).filter(row => row !== null);
+    
+    return animatedSortedRows;
+  };
+  
+  // Helper to get data for the LIMIT table
+  const getLimitTableData = () => {
+    if (!previousStep || isLimitToSelectTransition) {
+      return [];
+    }
+    
+    const orderByData = generateDataSource(previousStep.data || []);
+    
+    // Get LIMIT parameters
+    const limitValue = parseInt(currentStep?.metadata?.limit || '5');
+    const offsetValue = parseInt(currentStep?.metadata?.offset || '0');
+    
+    // During animation or after, show all selected rows at once
+    if (limitingInProgress || true) {
+      return orderByData
+        .filter((_, index: number) => index >= offsetValue && index < offsetValue + limitValue);
+    }
+  };
+  
+  // Helper to get data for the SELECT table
+  const getSelectTableData = () => {
+    if (!previousStep) {
+      return [];
+    }
+    
+    const limitData = generateDataSource(previousStep.data || []);
+    
+    // Get LIMIT parameters from previous step
+    const limitValue = parseInt(previousStep?.metadata?.limit || '5');
+    const offsetValue = parseInt(previousStep?.metadata?.offset || '0');
+    
+    // Get columns from SELECT clause
+    const selectColumns = currentStep?.metadata?.selectColumns?.split(',').map((col: string) => col.trim()) || [];
+    const allColumns = previousStep?.data[0]?.columns || [];
+    
+    // Find indices of selected columns
+    const selectedIndices = selectColumns.map(selectCol => {
+      return allColumns.findIndex(col => col.toLowerCase() === selectCol.toLowerCase());
+    }).filter(index => index !== -1);
+    
+    // Filter to only show rows within the LIMIT range
+    const filteredData = limitData;
+    
+    // During animation, filter visible columns to only those selected so far
+    if (selectingInProgress) {
+      // Create a copy of the data with only selected columns that are processed so far
+      return filteredData.map((row: any) => {
+        const newRow = { ...row };
+        
+        // For each column, keep only if it's in the selected columns and has been processed
+        Object.keys(row).forEach(key => {
+          if (key.startsWith('col_')) {
+            const colIndex = parseInt(key.replace('col_', ''));
+            if (!selectedColumns.includes(colIndex)) {
+              // Keep the property but set value to undefined if not yet selected
+              newRow[key] = undefined;
+            }
+          }
+        });
+        
+        return newRow;
       });
     }
     
-    // During animation, only show rows that have been evaluated and passed
-    return allData.filter((_: any, index: number) => {
-      return evaluatedRows[index] === true;
+    // After animation, show only the columns that were selected
+    return filteredData.map((row: any) => {
+      const newRow = { ...row };
+      
+      // For each column, keep only if it's in the selected columns
+      Object.keys(row).forEach(key => {
+        if (key.startsWith('col_')) {
+          const colIndex = parseInt(key.replace('col_', ''));
+          if (!selectedIndices.includes(colIndex)) {
+            delete newRow[key];
+          }
+        }
+      });
+      
+      return newRow;
     });
   };
   
@@ -246,144 +635,401 @@ const VisualizationPane: React.FC = () => {
     );
   };
   
-  // Render a specific step's data table
-  const renderStepTable = (step: any, stepIndex: number, isCurrentStep: boolean = false) => {
-    if (!step || !step.data) {
-      return <Empty description="No data available for this step" />;
+  // Render the ORDER BY explanation during animation
+  const renderOrderByInfo = () => {
+    if (!isWhereToOrderByTransition || !sortingInProgress) {
+      return null;
     }
     
-    const columns = generateColumns(step.data);
-    
-    // Determine which data to show
-    let dataSource;
-    
-    if (isCurrentStep && step.type === 'WHERE' && isFromToWhereTransition) {
-      // For WHERE table, only show rows that passed
-      dataSource = getWhereTableData();
-    } else if (!isCurrentStep && step.type === 'WHERE' && currentStep?.type !== 'FROM') {
-      // For WHERE table shown as a previous step (left side), only show rows that passed the condition
-      const allData = generateDataSource(step.data);
-      const lastColumnIndex = columns.length - 1;
-      
-      // Filter to only show rows that passed the WHERE condition
-      dataSource = allData.filter((row: any) => row[`col_${lastColumnIndex}`] === 1);
-    } else {
-      dataSource = generateDataSource(step.data);
-    }
-    
-    // Hide condition result column in steps after WHERE
-    let displayColumns = [...columns];
-    
-    // Hide condition result column in all WHERE tables
-    if ((step.type === 'WHERE' || (step.type !== 'FROM' && step.type !== 'WHERE')) && columns.length > 0) {
-      // Check if last column is condition result
-      const lastCol = columns[columns.length - 1];
-      if (lastCol.title === '_condition_result') {
-        displayColumns = columns.slice(0, -1);
-      }
-    }
-    
-    // For WHERE step displayed as previous step (after animation is done),
-    // hide the condition result column
-    if (!isCurrentStep && step.type === 'WHERE' && currentStep?.type !== 'FROM') {
-      if (columns.length > 0 && columns[columns.length - 1].title === '_condition_result') {
-        displayColumns = columns.slice(0, -1);
-      }
-    }
-    
-    const showConditionInfo = !isCurrentStep && step.type === 'FROM' && isFromToWhereTransition && animationInProgress;
+    // Get the ORDER BY info from step description
+    const orderByClause = currentStep?.description?.replace('Order results by: ', '') || '';
     
     return (
-      <div>
-        <div className="step-header">
-          <Title level={5} className={`step-type step-type-${step.type.toLowerCase().replace(/\s+/g, '-')}`}>
-            {step.type}
-          </Title>
-          <Text>{step.description}</Text>
-        </div>
-        
-        {showConditionInfo && renderConditionEvaluation()}
-        
-        <div className="table-container" id={`step-${stepIndex}-visualization`}>
-          <Table
-            columns={displayColumns}
-            dataSource={dataSource}
-            pagination={false}
-            scroll={{ x: 'max-content', y: 400 }}
-            bordered
-            size="small"
-            rowKey={(record) => record.key}
-            rowClassName={(record, index) => {
-              let className = `table-row ${isCurrentStep ? 'current-step' : 'previous-step'}`;
-              
-              // For FROM table during animation
-              if (!isCurrentStep && step.type === 'FROM' && isFromToWhereTransition) {
-                // Highlight the current row being evaluated
-                if (index === currentRowIndex && animationInProgress) {
-                  className += ' row-evaluating';
-                }
-                
-                // Mark rows that have been evaluated
-                if (index in evaluatedRows) {
-                  className += evaluatedRows[index] ? ' row-passed' : ' row-failed';
-                }
-              }
-              
-              // For WHERE table
-              if (isCurrentStep && step.type === 'WHERE') {
-                // Add animation for newly added rows
-                if (animationInProgress && index === Object.keys(evaluatedRows).filter(key => evaluatedRows[Number(key)]).length - 1) {
-                  className += ' row-entering';
-                }
-                
-                // Show if row is matched or filtered
-                const lastColumnIndex = columns.length - 1;
-                const isMatched = record[`col_${lastColumnIndex}`] === 1;
-                className += isMatched ? ' matched-row' : ' filtered-row';
-              }
-              
-              return className;
-            }}
-          />
+      <div className="evaluation-info">
+        <div className="condition-box order-by-box">
+          <div className="condition-expression">
+            <Text strong>ORDER BY {orderByClause}</Text>
+          </div>
+          <div className="sort-direction">
+            {orderByClause.includes('DESC') ? '↓ Descending' : '↑ Ascending'}
+          </div>
         </div>
       </div>
     );
   };
   
-  // Function to render transition explanation based on step types
+  // Render the LIMIT explanation during animation
+  const renderLimitInfo = () => {
+    if (!currentStep || currentStep.type !== 'LIMIT') {
+      return null;
+    }
+    
+    const limitValue = parseInt(currentStep?.metadata?.limit || '5');
+    const offsetValue = parseInt(currentStep?.metadata?.offset || '0');
+    
+    let message = `LIMIT ${limitValue}`;
+    if (offsetValue > 0) {
+      message = `LIMIT ${limitValue} OFFSET ${offsetValue}`;
+    }
+    
+    // When animating, show which row is being evaluated
+    if (limitingInProgress && currentLimitRow !== null) {
+      const rowNumber = currentLimitRow;
+      if (rowNumber < offsetValue) {
+        message = `Skipping row ${rowNumber + 1} (before offset ${offsetValue})`;
+      } else if (rowNumber < offsetValue + limitValue) {
+        message = `Including row ${rowNumber + 1} (within limit of ${limitValue})`;
+      } else {
+        message = `Excluding row ${rowNumber + 1} (exceeds limit of ${limitValue})`;
+      }
+    }
+    
+    return (
+      <Alert
+        message={message}
+        type="info"
+        showIcon
+        style={{ marginBottom: 16 }}
+      />
+    );
+  };
+  
+  // Render the SELECT explanation during animation
+  const renderSelectInfo = () => {
+    if (!currentStep || currentStep.type !== 'SELECT') {
+      return null;
+    }
+    
+    const selectColumns = currentStep?.metadata?.selectColumns?.split(',').map(col => col.trim()) || [];
+    
+    let message = `SELECT ${selectColumns.join(', ')}`;
+    
+    // When animating, show which column is being selected
+    if (selectingInProgress && currentSelectColumn !== null) {
+      const columnName = previousStep?.data[0]?.columns[currentSelectColumn] || '';
+      message = `Selecting column: ${columnName}`;
+    }
+    
+    return (
+      <Alert
+        message={message}
+        type="info"
+        showIcon
+        style={{ marginBottom: 16 }}
+      />
+    );
+  };
+  
+  // Helper for determining row class names based on row state
+  const rowClassName = (record: any, index: number, tableIsCurrentStep: boolean): string => {
+    let className = 'table-row';
+    
+    // FROM to WHERE transition
+    if (isFromToWhereTransition) {
+      if (!animationInProgress) {
+        return className;
+      }
+      
+      // In the FROM table
+      if (!tableIsCurrentStep) {
+        // Highlight the current row being evaluated
+        if (index === currentRowIndex) {
+          className += ' row-evaluating';
+        }
+        
+        // Mark rows that have been evaluated
+        if (index in evaluatedRows) {
+          className += evaluatedRows[index] ? ' row-passed' : ' row-failed';
+        }
+      } 
+      // In the WHERE table
+      else {
+        // Find if this row passes the condition
+        // We need to find this from the original data
+        if (currentStep?.data && currentStep.data[0]) {
+          const conditionIndex = currentStep.data[0].columns.findIndex(
+            (col: string) => col === '_condition_result'
+          );
+          
+          if (conditionIndex !== -1) {
+            const rowData = generateDataSource(currentStep.data)[index];
+            const rowPasses = rowData && rowData[`col_${conditionIndex}`] === 1;
+            
+            // Show visual indication for both passed and failed rows
+            if (index in evaluatedRows) {
+              if (evaluatedRows[index]) {
+                className += ' row-entering matched-row'; // Passed and should be added
+              } else {
+                className += ' row-entering filtered-row'; // Failed but still shown for visualization
+              }
+            } else if (rowPasses !== undefined) {
+              className += rowPasses ? ' matched-row' : ' filtered-row';
+            }
+          }
+        }
+      }
+    }
+    
+    // WHERE to ORDER BY transition
+    else if (isWhereToOrderByTransition) {
+      if (!sortingInProgress) {
+        return className;
+      }
+      
+      // In the WHERE table
+      if (!tableIsCurrentStep) {
+        // Highlight the row currently being processed for sorting
+        if (index === currentSortingRow) {
+          className += ' row-sorting';
+        }
+        
+        // Mark rows that have been processed for sorting
+        if (sortedRows.includes(index)) {
+          className += ' row-sorted';
+        }
+      } 
+      // In the ORDER BY table
+      else {
+        // Add animation for rows being added to the sorted table
+        if (index < sortedRows.length) {
+          className += ' row-entering-sorted';
+        }
+      }
+    }
+    
+    // ORDER BY to LIMIT transition
+    else if (isOrderByToLimitTransition) {
+      if (!limitingInProgress) {
+        return className;
+      }
+      
+      // Get LIMIT parameters
+      const limitValue = parseInt(currentStep?.metadata?.limit || '5');
+      const offsetValue = parseInt(currentStep?.metadata?.offset || '0');
+      
+      // In the ORDER BY table
+      if (!tableIsCurrentStep) {
+        // Highlight the row currently being processed for limiting
+        if (index === currentLimitRow) {
+          className += ' row-limiting';
+        }
+        
+        // Mark rows that have been included in the limit
+        if (limitedRows.includes(index)) {
+          className += ' row-limited';
+        }
+        // Mark rows that will be excluded
+        else if (index < offsetValue || index >= offsetValue + limitValue) {
+          className += ' row-excluded';
+        }
+      } 
+      // In the LIMIT table
+      else {
+        // Rows are only shown if they are included in the limit
+        // Add animation for rows being added to the limited table
+        if (limitedRows.includes(index + offsetValue)) {
+          className += ' row-entering-limited';
+        }
+      }
+    }
+    
+    // LIMIT to SELECT transition
+    else if (isLimitToSelectTransition) {
+      if (!selectingInProgress) {
+        return className;
+      }
+      
+      // The row styling doesn't change much during column selection
+      // but we can add a class to indicate the transition is happening
+      className += ' during-column-selection';
+    }
+    
+    return className;
+  };
+  
+  // Helper to generate data for displayed tables
+  const generateTableData = (step: any, isCurrentStep: boolean) => {
+    if (!step || !step.data) {
+      return [];
+    }
+    
+    // For previous step tables (left side), show the final state of that step
+    if (!isCurrentStep) {
+      // FROM step when transitioning to WHERE - show original data
+      if (step.type === 'FROM' && currentStep?.type === 'WHERE') {
+        return generateDataSource(step.data);
+      }
+      
+      // WHERE step when transitioning to ORDER BY - show only rows that passed the condition
+      if (step.type === 'WHERE' && currentStep?.type === 'ORDER BY') {
+        const data = generateDataSource(step.data);
+        const conditionIndex = step.data[0]?.columns.findIndex((col: string) => col === '_condition_result');
+        
+        if (conditionIndex !== -1) {
+          return data.filter((row: any) => row[`col_${conditionIndex}`] === 1);
+        }
+        return data;
+      }
+      
+      // ORDER BY step when transitioning to LIMIT - show sorted data
+      if (step.type === 'ORDER BY' && currentStep?.type === 'LIMIT') {
+        return generateDataSource(step.data);
+      }
+      
+      // LIMIT step when transitioning to SELECT - show limited data
+      if (step.type === 'LIMIT' && currentStep?.type === 'SELECT') {
+        return generateDataSource(step.data);
+      }
+      
+      // Default case for previous step
+      return generateDataSource(step.data);
+    }
+    
+    // For current step tables (right side)
+    // Handle special cases during animations
+    
+    // WHERE table during FROM->WHERE transition
+    if (isFromToWhereTransition && step.type === 'WHERE') {
+      return getWhereTableData();
+    }
+    
+    // ORDER BY table during WHERE->ORDER BY transition
+    if (isWhereToOrderByTransition && step.type === 'ORDER BY') {
+      return getOrderByTableData();
+    }
+    
+    // LIMIT table during ORDER BY->LIMIT transition
+    if (isOrderByToLimitTransition && step.type === 'LIMIT') {
+      return getLimitTableData();
+    }
+    
+    // SELECT table during LIMIT->SELECT transition
+    if (isLimitToSelectTransition && step.type === 'SELECT') {
+      return getSelectTableData();
+    }
+    
+    // Default case for current step
+    return generateDataSource(step.data);
+  };
+  
+  // Render explanatory text for transitions
   const renderTransitionExplanation = (fromStep: any, toStep: any) => {
-    if (!fromStep || !toStep) return null;
+    if (fromStep.type === 'FROM' && toStep.type === 'WHERE') {
+      return (
+        <div className="transition-explanation">
+          <Divider>
+            <Text strong>Filtering Data with WHERE Clause</Text>
+          </Divider>
+          <Text>
+            The WHERE clause filters rows from the table based on a condition. 
+            Only rows that satisfy the condition will proceed to the next step.
+          </Text>
+        </div>
+      );
+    }
     
-    const fromType = fromStep.type;
-    const toType = toStep.type;
-    
-    let explanation = "";
-    
-    // Determine explanation based on transition type
-    if (fromType === 'FROM' && toType === 'WHERE') {
-      explanation = "Filtering rows from the table based on the WHERE condition";
-    } else if (fromType === 'FROM' && toType === 'JOIN') {
-      explanation = "Combining data from multiple tables based on the JOIN condition";
-    } else if (fromType === 'WHERE' && toType === 'JOIN') {
-      explanation = "Joining filtered data with another table";
-    } else if ((fromType === 'FROM' || fromType === 'WHERE' || fromType === 'JOIN') && toType === 'GROUP BY') {
-      explanation = "Grouping rows with the same values in specified columns";
-    } else if (toType === 'ORDER BY') {
-      explanation = "Sorting the result set based on specified columns";
-    } else if (toType === 'LIMIT') {
-      explanation = "Restricting the number of rows in the final result";
-    } else if (toType === 'SELECT') {
-      explanation = "Selecting only specified columns for the final output";
-    } else {
-      explanation = `Transition from ${fromType} to ${toType}`;
+    if (fromStep.type === 'WHERE' && toStep.type === 'ORDER BY') {
+      return (
+        <div className="transition-explanation">
+          <Divider>
+            <Text strong>Sorting Data with ORDER BY Clause</Text>
+          </Divider>
+          <Text>
+            The ORDER BY clause sorts the filtered data based on one or more columns. 
+            {toStep.metadata?.orderByColumns.includes('DESC') 
+              ? ' Results are sorted in descending order (highest to lowest).' 
+              : ' Results are sorted in ascending order (lowest to highest).'}
+          </Text>
+        </div>
+      );
     }
     
     return (
       <div className="transition-explanation">
-        <Divider orientation="center">
-          <Text strong>{fromType} → {toType}</Text>
+        <Divider>
+          <Text strong>From {fromStep.type} to {toStep.type}</Text>
         </Divider>
-        <Text>{explanation}</Text>
+        <Text>
+          {`Moving from ${fromStep.type} to ${toStep.type} in the SQL execution process.`}
+        </Text>
+      </div>
+    );
+  };
+  
+  // Function to render the appropriate table for the current step
+  const renderStepTable = (step: any, isCurrentStep: boolean = true) => {
+    if (!step) {
+      return <Empty description="No data to visualize" />;
+    }
+    
+    // Generate columns and filter out the condition result column
+    let columns = generateColumns(step.data || []);
+    if (columns.length > 0) {
+      // Check if last column is the condition result column
+      const lastCol = columns[columns.length - 1];
+      if (lastCol.title === '_condition_result') {
+        columns = columns.slice(0, -1);
+      }
+    }
+    
+    // Get the appropriate data for this step
+    const dataSource = generateTableData(step, isCurrentStep);
+    
+    // Apply special column styling based on the transition
+    if (isWhereToOrderByTransition && step.type === 'ORDER BY') {
+      // Highlight the order by column
+      const orderByInfo = step?.metadata?.orderByColumns || 'age DESC';
+      const [orderByColumn] = orderByInfo.split(' ');
+      
+      columns = columns.map((col: any) => {
+        if (col.title.toLowerCase() === orderByColumn.toLowerCase()) {
+          return {
+            ...col,
+            className: 'sorting-column'
+          };
+        }
+        return col;
+      });
+    }
+    
+    if (isLimitToSelectTransition && step.type === 'SELECT') {
+      // Highlight selected columns
+      const selectColumns = step?.metadata?.selectColumns?.split(',').map((col: string) => col.trim()) || [];
+      
+      columns = columns.map((col: any) => {
+        if (selectColumns.includes(col.title)) {
+          return {
+            ...col,
+            className: 'selected-column'
+          };
+        }
+        return col;
+      });
+    }
+    
+    // Add appropriate table CSS classes based on the transition
+    let tableClassName = '';
+    
+    if (isFromToWhereTransition && step.type === 'WHERE') {
+      tableClassName = animationInProgress ? 'where-table animating' : 'where-table';
+    } else if (isWhereToOrderByTransition && step.type === 'ORDER BY') {
+      tableClassName = 'order-by-table';
+    } else if (isOrderByToLimitTransition && step.type === 'LIMIT') {
+      tableClassName = 'limit-table';
+    } else if (isLimitToSelectTransition && step.type === 'SELECT') {
+      tableClassName = 'select-table';
+    }
+    
+    return (
+      <div className={tableClassName}>
+        <Table 
+          columns={columns} 
+          dataSource={dataSource}
+          pagination={false}
+          size="small"
+          rowClassName={(record: any, index: number) => rowClassName(record, index, isCurrentStep)}
+          scroll={{ x: 'max-content', y: 300 }}
+        />
       </div>
     );
   };
@@ -409,38 +1055,109 @@ const VisualizationPane: React.FC = () => {
     
     // If we have both a previous and current step, show side by side
     if (previousStep && currentStep) {
-      const transitionControls = isFromToWhereTransition && !animationInProgress ? (
-        <div className="animation-controls">
-          <Alert
-            message="Click to see the WHERE condition evaluation process"
-            type="info"
-            showIcon
-            action={
-              <button 
-                className="start-animation-btn" 
-                onClick={startFromToWhereAnimation}
-              >
-                Start Animation
-              </button>
-            }
-          />
-        </div>
-      ) : null;
+      // Show animation controls based on the transition type
+      let transitionControls = null;
+      
+      if (isFromToWhereTransition && !animationInProgress) {
+        transitionControls = (
+          <div className="animation-controls">
+            <Alert
+              message="Click to see the WHERE condition evaluation process"
+              type="info"
+              showIcon
+              action={
+                <button 
+                  className="start-animation-btn" 
+                  onClick={startFromToWhereAnimation}
+                >
+                  Start Animation
+                </button>
+              }
+            />
+          </div>
+        );
+      } else if (isWhereToOrderByTransition && !sortingInProgress) {
+        transitionControls = (
+          <div className="animation-controls">
+            <Alert
+              message="Click to see the ORDER BY sorting process"
+              type="info"
+              showIcon
+              action={
+                <button 
+                  className="start-animation-btn" 
+                  onClick={startWhereToOrderByAnimation}
+                >
+                  Start Animation
+                </button>
+              }
+            />
+          </div>
+        );
+      } else if (isOrderByToLimitTransition && !limitingInProgress) {
+        transitionControls = (
+          <div className="animation-controls">
+            <Alert
+              message="Click to see the LIMIT row selection process"
+              type="info"
+              showIcon
+              action={
+                <button 
+                  className="start-animation-btn" 
+                  onClick={startOrderByToLimitAnimation}
+                >
+                  Start Animation
+                </button>
+              }
+            />
+          </div>
+        );
+      } else if (isLimitToSelectTransition && !selectingInProgress) {
+        transitionControls = (
+          <div className="animation-controls">
+            <Alert
+              message="Click to see the SELECT column selection process"
+              type="info"
+              showIcon
+              action={
+                <button 
+                  className="start-animation-btn" 
+                  onClick={startLimitToSelectAnimation}
+                >
+                  Start Animation
+                </button>
+              }
+            />
+          </div>
+        );
+      }
+      
+      // Add class for different transition types
+      let transitionClass = '';
+      if (isFromToWhereTransition) {
+        transitionClass = 'from-to-where-transition';
+      } else if (isWhereToOrderByTransition) {
+        transitionClass = 'where-to-order-by-transition';
+      } else if (isOrderByToLimitTransition) {
+        transitionClass = 'order-by-to-limit-transition';
+      } else if (isLimitToSelectTransition) {
+        transitionClass = 'limit-to-select-transition';
+      }
       
       return (
         <div>
           {renderTransitionExplanation(previousStep, currentStep)}
           {transitionControls}
           
-          <Row gutter={16} className={`visualization-row ${isFromToWhereTransition ? 'from-to-where-transition' : ''}`}>
+          <Row gutter={16} className={`visualization-row ${transitionClass}`}>
             <Col xs={24} md={12} className="previous-step-col">
               <div className="step-container previous-step-container">
-                {renderStepTable(previousStep, currentStepIndex - 1)}
+                {renderStepTable(previousStep, false)}
               </div>
             </Col>
             <Col xs={24} md={12} className="current-step-col">
               <div className="step-container current-step-container">
-                {renderStepTable(currentStep, currentStepIndex, true)}
+                {renderStepTable(currentStep, true)}
               </div>
             </Col>
           </Row>
@@ -448,17 +1165,20 @@ const VisualizationPane: React.FC = () => {
       );
     }
     
-    // If we're at the first step, just show the current step
+    // If only one step, show it full width
     return (
-      <div className="single-step-container">
-        {renderStepTable(currentStep, currentStepIndex, true)}
+      <div className="step-container single-step-container">
+        {renderStepTable(currentStep, true)}
       </div>
     );
   };
   
   return (
-    <Card className="visualization-pane-card" ref={containerRef}>
-      <Title level={4}>SQL Execution Visualization</Title>
+    <Card 
+      title="SQL Execution Visualization" 
+      className="visualization-pane"
+      ref={containerRef}
+    >
       {renderContent()}
     </Card>
   );

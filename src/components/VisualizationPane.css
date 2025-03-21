@@ -454,4 +454,159 @@
 /* Add smooth scrolling to tables */
 .table-container .ant-table-body {
   scroll-behavior: smooth;
+}
+
+/* New styles for ORDER BY animation */
+.where-to-order-by-transition .order-by-column {
+  background-color: rgba(255, 191, 0, 0.15) !important;
+}
+
+.order-by-column-header {
+  background-color: rgba(255, 191, 0, 0.2);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: bold;
+  display: inline-block;
+  position: relative;
+}
+
+.order-by-column-header::after {
+  content: "↓";
+  margin-left: 4px;
+  font-weight: bold;
+}
+
+/* Row being currently sorted */
+.row-sorting {
+  position: relative;
+  background-color: rgba(255, 191, 0, 0.2) !important;
+  z-index: 10;
+  box-shadow: 0 0 8px rgba(255, 191, 0, 0.5) !important;
+  transition: all 0.5s ease;
+  border: 2px solid #ffbf00 !important;
+}
+
+.row-sorting td {
+  font-weight: bold !important;
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+/* Rows that have been sorted */
+.row-sorted {
+  background-color: rgba(255, 191, 0, 0.1) !important;
+  transition: background-color 0.5s ease;
+}
+
+/* Row entering the sorted table */
+.row-entering-sorted {
+  animation: rowEnterSortedAnimation 1.2s ease;
+}
+
+@keyframes rowEnterSortedAnimation {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+    background-color: rgba(255, 191, 0, 0.3);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    background-color: transparent;
+  }
+}
+
+/* ORDER BY info box */
+.order-by-box {
+  border-left: 4px solid #ffbf00;
+}
+
+.sort-direction {
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-weight: bold;
+  margin-left: 16px;
+  min-width: 120px;
+  text-align: center;
+  background-color: rgba(255, 191, 0, 0.1);
+}
+
+/* Highlight cells in the sorting column */
+.has-order-column td[class*="col_"] {
+  transition: background-color 0.5s ease;
+}
+
+.row-sorting td.order-by-column,
+.has-order-column:hover td.order-by-column {
+  background-color: rgba(255, 191, 0, 0.3) !important;
+  font-weight: bold;
+}
+
+/* Styling for the WHERE table rows */
+.where-table .filtered-row {
+  background-color: rgba(255, 77, 79, 0.2);
+  position: relative;
+}
+
+.where-table .row-entering.filtered-row {
+  animation: show-filtered-row 0.5s ease-in-out;
+}
+
+@keyframes show-filtered-row {
+  0% {
+    background-color: rgba(255, 77, 79, 0);
+    opacity: 0.5;
+  }
+  100% {
+    background-color: rgba(255, 77, 79, 0.2);
+    opacity: 1;
+  }
+}
+
+/* LIMIT animation styles */
+/* Row currently being evaluated for limiting */
+.row-limiting {
+  position: relative;
+  background-color: rgba(250, 140, 22, 0.2) !important;
+  z-index: 10;
+  box-shadow: 0 0 8px rgba(250, 140, 22, 0.5) !important;
+  transition: all 0.5s ease;
+  border: 2px solid #fa8c16 !important;
+}
+
+.row-limiting td {
+  font-weight: bold !important;
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+/* Rows that have been included in the limit */
+.row-limited {
+  background-color: rgba(250, 140, 22, 0.1) !important;
+  transition: background-color 0.5s ease;
+}
+
+/* Rows that are excluded from the limit */
+.row-excluded {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+  color: rgba(0, 0, 0, 0.4) !important;
+  text-decoration: line-through;
+  opacity: 0.5;
+  transition: all 0.5s ease;
+}
+
+/* Row entering the limited table */
+.row-entering-limited {
+  animation: rowEnterLimitedAnimation 1s ease;
+}
+
+@keyframes rowEnterLimitedAnimation {
+  0% {
+    opacity: 0;
+    transform: translateY(-5px);
+    background-color: rgba(250, 140, 22, 0.3);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    background-color: transparent;
+  }
 } 
