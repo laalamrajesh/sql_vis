@@ -30,6 +30,13 @@ const App: React.FC = () => {
     init();
   }, [setDatabase]);
   
+  // Function to handle running the query
+  const handleRunQuery = (query: string) => {
+    // This function is passed to SqlEditor but doesn't need to do anything
+    // because SqlEditor already handles running the query internally
+    console.log('Query executed:', query);
+  };
+  
   if (loading) {
     return <div className="loading">Initializing SQL engine...</div>;
   }
@@ -47,7 +54,7 @@ const App: React.FC = () => {
           <DatabaseExplorer />
         </Sider>
         <Content className="app-content">
-          <SqlEditor />
+          <SqlEditor onRunQuery={handleRunQuery} />
           <ExecutionTimeline />
           <VisualizationPane />
         </Content>

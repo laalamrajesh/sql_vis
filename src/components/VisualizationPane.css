@@ -1,28 +1,39 @@
 .visualization-pane-card {
-  margin-top: 16px;
-  margin-bottom: 16px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-top: 2px;
+  margin-bottom: 2px;
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
   width: 100%;
   display: flex;
   flex-direction: column;
   flex: 1;
-  min-height: 0; /* Allow flex item to shrink below content size */
+  min-height: 0;
   overflow: hidden;
+  height: 100%;
+}
+
+.visualization-pane-card .ant-card-head {
+  min-height: 28px;
+  padding: 0 8px;
+}
+
+.visualization-pane-card .ant-card-head-title {
+  padding: 4px 0;
 }
 
 .visualization-pane-card .ant-card-body {
-  padding: 16px;
+  padding: 4px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   flex: 1;
-  min-height: 0; /* Critical for flex child to not expand beyond parent */
+  min-height: 0;
+  height: 100%;
 }
 
 /* Title should take minimal space */
 .visualization-pane-card .ant-typography {
-  margin-bottom: 12px !important;
+  margin-bottom: 2px !important;
 }
 
 /* Container for tables should expand to fill available space */
@@ -34,11 +45,12 @@
   overflow: hidden;
 }
 
+/* Step header should be more compact */
 .step-header {
-  margin-bottom: 16px;
+  margin-bottom: 2px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 1px;
 }
 
 .step-type {
@@ -154,10 +166,11 @@
 
 /* Side-by-side visualization styling */
 .visualization-row {
-  margin-top: 12px;
+  margin-top: 4px;
   display: flex;
   flex: 1;
   min-height: 0;
+  height: 100%;
 }
 
 .visualization-row > .ant-col {
@@ -173,17 +186,18 @@
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  padding: 8px;
-  border-radius: 8px;
+  padding: 2px;
+  border-radius: 6px;
   background-color: #fafafa;
-  border-left: 3px solid #1890ff;
+  border-left: 2px solid #1890ff;
+  height: 100%;
 }
 
 .step-container {
-  padding: 8px;
-  border-radius: 8px;
+  padding: 2px;
+  border-radius: 6px;
   background-color: #fafafa;
-  height: auto;
+  height: 100%;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -348,9 +362,13 @@
   }
 }
 
-/* Animation controls */
+/* Animation controls should be compact */
 .animation-controls {
-  margin: 16px 0;
+  margin-bottom: 4px;
+}
+
+.animation-controls .ant-alert {
+  padding: 6px 8px;
 }
 
 .start-animation-btn {
@@ -660,4 +678,9 @@
   color: #d9d9d9;
   font-style: italic;
   opacity: 0.7;
+}
+
+/* Table cell padding reduction */
+.ant-table-cell {
+  padding: 6px 8px !important;
 } 

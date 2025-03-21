@@ -11,7 +11,11 @@ import './SqlEditor.css';
 // Singleton animation controller
 const animationController = new AnimationController();
 
-const SqlEditor: React.FC = () => {
+interface SqlEditorProps {
+  onRunQuery: (query: string) => void;
+}
+
+const SqlEditor: React.FC<SqlEditorProps> = ({ onRunQuery }) => {
   const [queryText, setQueryText] = useState(
     'SELECT name, department\nFROM users\nWHERE status = "active"\nORDER BY age DESC\nLIMIT 5'
   );
@@ -58,10 +62,25 @@ const SqlEditor: React.FC = () => {
       setError(`${error}`);
       message.error('Error executing query');
     }
+    
+    onRunQuery(queryText);
   };
   
   return (
-    <Card className="sql-editor-card" title="SQL Query Editor">
+    <Card 
+      title="SQL Query Editor"
+      className="sql-editor-card"
+      extra={
+        <Button 
+          type="primary" 
+          icon={<PlayCircleOutlined />} 
+          onClick={handleRunQuery}
+          disabled={executionState === 'running'}
+        >
+          Run Query
+        </Button>
+      }
+    >
       <CodeMirror
         value={queryText}
         height="150px"
@@ -69,19 +88,6 @@ const SqlEditor: React.FC = () => {
         onChange={(value) => setQueryText(value)}
         className="sql-editor"
       />
-      
-      <div className="sql-editor-controls">
-        <Space>
-          <Button
-            type="primary"
-            icon={<PlayCircleOutlined />}
-            onClick={handleRunQuery}
-            disabled={executionState === 'running'}
-          >
-            Run Query
-          </Button>
-        </Space>
-      </div>
     </Card>
   );
 };
