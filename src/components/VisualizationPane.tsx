@@ -341,7 +341,7 @@ const VisualizationPane: React.FC = () => {
     }
     
     // Get the condition result for this row (1 = pass, 0 = fail)
-    const conditionIndex = currentStep?.data[0]?.columns.findIndex(col => col === '_condition_result');
+    const conditionIndex = currentStep?.data[0]?.columns.findIndex((col: string) => col === '_condition_result');
     
     // Determine if the current row passes the condition
     let rowPasses = false;
@@ -478,13 +478,13 @@ const VisualizationPane: React.FC = () => {
     const whereData = generateDataSource(currentStep.data || []);
     
     // Get the condition result column index
-    const conditionIndex = currentStep.data[0]?.columns.findIndex(col => col === '_condition_result');
+    const conditionIndex = currentStep.data[0]?.columns.findIndex((col: string) => col === '_condition_result');
     
     if (!animationInProgress) {
       // Before animation starts, show filtered data based on condition
       if (conditionIndex !== -1) {
         // Show only rows that passed the condition
-        return whereData.filter(row => row[`col_${conditionIndex}`] === 1);
+        return whereData.filter((row: any) => row[`col_${conditionIndex}`] === 1);
       }
       return whereData;
     }
@@ -596,9 +596,7 @@ const VisualizationPane: React.FC = () => {
     const whereData = generateDataSource(previousStep?.data || []);
     
     // Filter out rows that didn't pass WHERE
-    const conditionIndex = previousStep?.data[0]?.columns.findIndex(
-      (col: string) => col === '_condition_result'
-    );
+    const conditionIndex = previousStep?.data[0]?.columns.findIndex((col: string) => col === '_condition_result');
     
     // Get only rows that passed the WHERE condition
     const filteredWhereData = conditionIndex !== -1 ? 

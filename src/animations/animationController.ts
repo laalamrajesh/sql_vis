@@ -156,7 +156,7 @@ export class AnimationController {
       }
     });
     
-    this.activeAnimations.set(animationId, this.timeline.recent());
+    this.activeAnimations.set(animationId, this.timeline.recent() as gsap.core.Tween);
   }
   
   private addWhereAnimation(step: ExecutionStep, index: number, options: AnimationOptions): void {
@@ -198,7 +198,7 @@ export class AnimationController {
       delay: 0.2
     });
     
-    this.activeAnimations.set(animationId, this.timeline.recent());
+    this.activeAnimations.set(animationId, this.timeline.recent() as gsap.core.Tween);
   }
   
   private addJoinAnimation(step: ExecutionStep, index: number, options: AnimationOptions): void {
@@ -245,7 +245,7 @@ export class AnimationController {
       delay: 0.2
     });
     
-    this.activeAnimations.set(animationId, this.timeline.recent());
+    this.activeAnimations.set(animationId, this.timeline.recent() as gsap.core.Tween);
   }
   
   private addGroupByAnimation(step: ExecutionStep, index: number, options: AnimationOptions): void {
@@ -292,7 +292,7 @@ export class AnimationController {
       delay: 0.2
     });
     
-    this.activeAnimations.set(animationId, this.timeline.recent());
+    this.activeAnimations.set(animationId, this.timeline.recent() as gsap.core.Tween);
   }
   
   private addSelectAnimation(step: ExecutionStep, index: number, options: AnimationOptions): void {
@@ -338,7 +338,7 @@ export class AnimationController {
       delay: 0.2
     });
     
-    this.activeAnimations.set(animationId, this.timeline.recent());
+    this.activeAnimations.set(animationId, this.timeline.recent() as gsap.core.Tween);
   }
   
   private addOrderByAnimation(step: ExecutionStep, index: number, options: AnimationOptions): void {
@@ -414,7 +414,7 @@ export class AnimationController {
       delay: 0.2
     });
     
-    this.activeAnimations.set(animationId, this.timeline.recent());
+    this.activeAnimations.set(animationId, this.timeline.recent() as gsap.core.Tween);
   }
   
   private addLimitAnimation(step: ExecutionStep, index: number, options: AnimationOptions): void {
@@ -469,6 +469,6 @@ export class AnimationController {
       delay: 0.2
     });
     
-    this.activeAnimations.set(animationId, this.timeline.recent());
+    this.activeAnimations.set(animationId, this.timeline.recent() as gsap.core.Tween);
   }
 }

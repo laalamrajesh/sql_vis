@@ -158,8 +158,8 @@ export const parseQuery = (query: string, db: Database): QueryPlan => {
       const orderData = db.exec(`
         SELECT * 
         FROM ${tableName} 
-        ${steps.find(s => s.type === 'WHERE') ? `WHERE ${steps.find(s => s.type === 'WHERE')?.metadata.condition}` : ''}
-        ${steps.find(s => s.type === 'GROUP BY') ? `GROUP BY ${steps.find(s => s.type === 'GROUP BY')?.metadata.groupByColumns}` : ''}
+        ${steps.find(s => s.type === 'WHERE') ? `WHERE ${steps.find(s => s.type === 'WHERE')!.metadata.condition}` : ''}
+        ${steps.find(s => s.type === 'GROUP BY') ? `GROUP BY ${steps.find(s => s.type === 'GROUP BY')!.metadata.groupByColumns}` : ''}
         ORDER BY ${orderByColumns} 
         LIMIT 100
       `);
@@ -195,9 +195,9 @@ export const parseQuery = (query: string, db: Database): QueryPlan => {
       const limitData = db.exec(`
         SELECT * 
         FROM ${tableName} 
-        ${steps.find(s => s.type === 'WHERE') ? `WHERE ${steps.find(s => s.type === 'WHERE')?.metadata.condition}` : ''}
-        ${steps.find(s => s.type === 'GROUP BY') ? `GROUP BY ${steps.find(s => s.type === 'GROUP BY')?.metadata.groupByColumns}` : ''}
-        ${steps.find(s => s.type === 'ORDER BY') ? `ORDER BY ${steps.find(s => s.type === 'ORDER BY')?.metadata.orderByColumns}` : ''}
+        ${steps.find(s => s.type === 'WHERE') ? `WHERE ${steps.find(s => s.type === 'WHERE')!.metadata.condition}` : ''}
+        ${steps.find(s => s.type === 'GROUP BY') ? `GROUP BY ${steps.find(s => s.type === 'GROUP BY')!.metadata.groupByColumns}` : ''}
+        ${steps.find(s => s.type === 'ORDER BY') ? `ORDER BY ${steps.find(s => s.type === 'ORDER BY')!.metadata.orderByColumns}` : ''}
         LIMIT ${limit} OFFSET ${offset}
       `);
       
@@ -227,9 +227,9 @@ export const parseQuery = (query: string, db: Database): QueryPlan => {
       const selectData = db.exec(`
         SELECT ${selectColumns} 
         FROM ${tableName} 
-        ${steps.find(s => s.type === 'WHERE') ? `WHERE ${steps.find(s => s.type === 'WHERE')?.metadata.condition}` : ''}
-        ${steps.find(s => s.type === 'GROUP BY') ? `GROUP BY ${steps.find(s => s.type === 'GROUP BY')?.metadata.groupByColumns}` : ''}
-        ${steps.find(s => s.type === 'ORDER BY') ? `ORDER BY ${steps.find(s => s.type === 'ORDER BY')?.metadata.orderByColumns}` : ''}
+        ${steps.find(s => s.type === 'WHERE') ? `WHERE ${steps.find(s => s.type === 'WHERE')!.metadata.condition}` : ''}
+        ${steps.find(s => s.type === 'GROUP BY') ? `GROUP BY ${steps.find(s => s.type === 'GROUP BY')!.metadata.groupByColumns}` : ''}
+        ${steps.find(s => s.type === 'ORDER BY') ? `ORDER BY ${steps.find(s => s.type === 'ORDER BY')!.metadata.orderByColumns}` : ''}
         LIMIT ${limit} OFFSET ${offset}
       `);
       
